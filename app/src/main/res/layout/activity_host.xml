@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorBackground"
+    tools:context=".Host">
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:orientation="vertical">
+
+        <TableLayout
+            android:layout_width="fill_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:padding="20dp"
+            tools:layout_editor_absoluteX="8dp"
+            tools:layout_editor_absoluteY="16dp">
+
+            <TableRow
+                android:layout_width="0dp"
+                android:layout_height="match_parent">
+
+                <android.support.design.widget.TextInputLayout
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="@string/room_name_hint"
+                    app:hintAnimationEnabled="true">
+
+                    <android.support.design.widget.TextInputEditText
+                        android:id="@+id/roomName"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content" />
+                </android.support.design.widget.TextInputLayout>
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:baselineAligned="false">
+
+                <android.support.design.widget.TextInputLayout
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="@string/room_password_hint"
+                    app:helperText="(optional)"
+                    app:hintAnimationEnabled="true">
+
+                    <android.support.design.widget.TextInputEditText
+                        android:id="@+id/roomPassword"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content" />
+                </android.support.design.widget.TextInputLayout>
+            </TableRow>
+
+        </TableLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            tools:layout_editor_absoluteX="0dp"
+            tools:layout_editor_absoluteY="427dp">
+
+            <Button
+                android:id="@+id/cancelButton"
+                style="@style/ButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:layout_marginRight="10dp"
+                android:layout_weight="50"
+                android:background="#2a2a2a"
+                android:drawableStart="@drawable/ic_baseline_cancel_24px"
+                android:drawablePadding="-24sp"
+                android:drawableTint="@color/colorButtonTextPrimary"
+                android:text="@string/cancel_button_text"
+                android:onClick="cancelClicked"
+                tools:layout_editor_absoluteX="196dp"
+                tools:layout_editor_absoluteY="460dp" />
+
+            <Button
+                android:id="@+id/startButton"
+                style="@style/ButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="10dp"
+                android:layout_weight="50"
+                android:drawableStart="@drawable/ic_outline_check_24px"
+                android:drawablePadding="-24sp"
+                android:drawableTint="@color/colorButtonTextPrimary"
+                android:text="@string/start_button_text"
+                android:onClick="startClicked"
+                tools:layout_editor_absoluteX="196dp"
+                tools:layout_editor_absoluteY="460dp" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</android.support.constraint.ConstraintLayout>
