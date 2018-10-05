@@ -88,6 +88,8 @@ class ServerJukebox extends Jukebox {
 
     public void playNextSong() {
         Song next = getNextSong();
+        // TODO: if next is null at some point we'll probably want to implement
+        // filling the queue with other songs.
         if (next != null) {
             playSong(next);
         }

@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/colorBackground"
     tools:context=".QueueSong">
 
     <com.mancj.materialsearchbar.MaterialSearchBar
@@ -13,7 +14,6 @@
         app:mt_maxSuggestionsCount="10"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/searchBar"
-        android:layout_margin="10dp"/>
+        android:id="@+id/searchBar" />
 
 </android.support.constraint.ConstraintLayout>
