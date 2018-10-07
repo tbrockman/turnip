@@ -3,6 +3,7 @@ package ca.passtheaux.passtheaux;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,13 +21,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 
-public class CustomSuggestionsAdapter extends SuggestionsAdapter<Song, CustomSuggestionsAdapter.SuggestionHolder> {
+public class SongSuggestionsAdapter extends SuggestionsAdapter<Song, SongSuggestionsAdapter.SuggestionHolder> {
 
-    private static final String TAG = CustomSuggestionsAdapter.class.getSimpleName();
+    private static final String TAG = SongSuggestionsAdapter.class.getSimpleName();
 
-    private QueueSong.SongClickedCallback listener = null;
+    private SongSearch.SongClickedCallback listener = null;
 
-    public CustomSuggestionsAdapter(LayoutInflater inflater, QueueSong.SongClickedCallback callback) {
+    public SongSuggestionsAdapter(LayoutInflater inflater) {
+        super(inflater);
+    }
+
+    public SongSuggestionsAdapter(LayoutInflater inflater, SongSearch.SongClickedCallback callback) {
         super(inflater);
         this.listener = callback;
     }
@@ -35,7 +40,7 @@ public class CustomSuggestionsAdapter extends SuggestionsAdapter<Song, CustomSug
     public void onBindSuggestionHolder(Song suggestion, SuggestionHolder holder, int position) {
 
         holder.songName.setText(suggestion.getString("name"));
-        holder.artist.setText("artist");
+        holder.artist.setText(TextUtils.join(",", suggestion.getArtists()));
 
         try {
             if (!suggestion.hasAlbumArt()) {
@@ -101,8 +106,8 @@ public class CustomSuggestionsAdapter extends SuggestionsAdapter<Song, CustomSug
     }
 
     @Override
-    public CustomSuggestionsAdapter.SuggestionHolder onCreateViewHolder(ViewGroup parent,
-                                                                        int viewType) {
+    public SongSuggestionsAdapter.SuggestionHolder onCreateViewHolder(ViewGroup parent,
+                                                                      int viewType) {
         View view = getLayoutInflater().inflate(R.layout.item_custom_suggestion,
                                                 parent,
                                     false);

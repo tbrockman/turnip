@@ -7,7 +7,11 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+
 class SpotifySong extends Song {
+
+    private static final String TAG = SpotifySong.class.getSimpleName();
 
     public SpotifySong(JSONObject jsonSong) {
         super(jsonSong, "spotify");
@@ -47,6 +51,20 @@ class SpotifySong extends Song {
 
     public String getSongType() {
         return "spotify";
+    }
+
+    public ArrayList<String> getArtists() {
+        ArrayList<String> artists = new ArrayList<>();
+        try {
+            JSONArray jsonArtists = jsonSong.getJSONArray("artists");
+            for (int i = 0; i < jsonArtists.length(); i++) {
+                artists.add(jsonArtists.getJSONObject(i).getString("name"));
+            }
+        } catch (JSONException e) {
+            Log.e(TAG, "Error converting JSON artists into JSON array");
+        }
+
+        return artists;
     }
 
     @Override

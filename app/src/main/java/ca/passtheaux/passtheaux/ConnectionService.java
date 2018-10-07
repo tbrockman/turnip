@@ -91,6 +91,12 @@ public class ConnectionService extends Service {
         @Override
         public void onSongPlaying(Song song) {
             emitSongPlaying(song);
+            notifySongPlaying(song);
+        }
+
+        @Override
+        public void onSongRemoved(Song song) {
+            notifySongRemoved(song);
         }
     };
 

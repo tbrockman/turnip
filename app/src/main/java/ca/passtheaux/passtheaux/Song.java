@@ -6,6 +6,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+
 // Wrapper for our JSON songs
 public abstract class Song {
     JSONObject jsonSong;
@@ -24,6 +26,7 @@ public abstract class Song {
     abstract JSONArray getArray(String key);
     abstract boolean hasAlbumArt();
     abstract void setAlbumArt(Bitmap bitmap);
+    abstract ArrayList<String> getArtists();
     abstract String getString(String key);
     abstract String getSongType();
 }

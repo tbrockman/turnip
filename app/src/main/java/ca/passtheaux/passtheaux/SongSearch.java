@@ -25,15 +25,15 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
-public class QueueSong extends AppCompatActivity {
+public class SongSearch extends AppCompatActivity {
 
-    private static final String TAG = QueueSong.class.getSimpleName();
+    private static final String TAG = SongSearch.class.getSimpleName();
 
     // UI
 
     private MaterialSearchBar searchBar;
     LayoutInflater inflater;
-    CustomSuggestionsAdapter customSuggestionsAdapater;
+    SongSuggestionsAdapter customSuggestionsAdapater;
 
     // Search results
 
@@ -92,7 +92,7 @@ public class QueueSong extends AppCompatActivity {
                             songs.add(song);
                         }
                         inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
-                        customSuggestionsAdapater = new CustomSuggestionsAdapter(inflater,
+                        customSuggestionsAdapater = new SongSuggestionsAdapter(inflater,
                                                                                  songClickedCallback);
                         searchBar.setCustomSuggestionAdapter(customSuggestionsAdapater);
                         customSuggestionsAdapater.setSuggestions(songs);

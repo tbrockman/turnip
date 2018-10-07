@@ -14,7 +14,7 @@ import java.util.ArrayList;
 
 public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.RoomListViewHolder> {
 
-    private static final String TAG = ConnectionService.class.getSimpleName();
+    private static final String TAG = RoomListAdapter.class.getSimpleName();
 
     private ArrayList<ConnectionService.Endpoint> rooms;
 

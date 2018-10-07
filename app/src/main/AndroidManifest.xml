@@ -46,7 +46,7 @@
             android:parentActivityName=".Main"
             android:theme="@style/AppActionBarActivityTheme" />
         <activity
-            android:name=".QueueSong"
+            android:name=".SongSearch"
             android:theme="@style/Empty"/>
     </application>
 

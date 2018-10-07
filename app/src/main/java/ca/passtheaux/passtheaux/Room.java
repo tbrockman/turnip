@@ -8,11 +8,15 @@ import android.os.IBinder;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.ArrayList;
 
 
 public class Room extends AppCompatActivity {
@@ -23,8 +27,11 @@ public class Room extends AppCompatActivity {
     // Context
     Context context = this;
 
-    // UI Elements
-    FloatingActionButton fab;
+    // UI
+    private FloatingActionButton fab;
+    private RecyclerView recyclerView;
+    private LinearLayoutManager layoutManager;
+    private SongQueueAdapter adapter;
 
     // Intent extras
     private boolean isHost;
@@ -50,12 +57,37 @@ public class Room extends AppCompatActivity {
                     Log.i(TAG, "attempting to connect to room");
                     connectionService.connectToRoom(endpointId);
                 }
+                connectionService.subscribeSongQueue(songQueueListener);
             }
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
             connectionService = null;
+        }
+    };
+
+    // Song queue
+    private Song currentlyPlaying;
+    private ArrayList<Song> songQueue;
+    private ConnectionService.SongQueueListener songQueueListener = new ConnectionService.SongQueueListener() {
+        @Override
+        public void onSongAdded(Song song) {
+            Log.i(TAG, "heard song added");
+            songQueue.add(song);
+            adapter.notifyItemInserted(songQueue.size() - 1);
+        }
+
+        @Override
+        public void onSongRemoved(Song song) {
+            int index = songQueue.indexOf(song);
+            songQueue.remove(index);
+            adapter.notifyItemRemoved(index);
+        }
+
+        @Override
+        public void onSongPlaying(Song song) {
+            currentlyPlaying = song;
         }
     };
 
@@ -73,6 +105,7 @@ public class Room extends AppCompatActivity {
 
         setTitle(roomName);
 
+        recyclerView = (RecyclerView) findViewById(R.id.roomRecyclerView);
         fab =  findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -80,6 +113,13 @@ public class Room extends AppCompatActivity {
                 startAddActivity();
             }
         });
+
+        songQueue = new ArrayList();
+        layoutManager = new LinearLayoutManager(this);
+        adapter = new SongQueueAdapter(songQueue);
+
+        recyclerView.setLayoutManager(layoutManager);
+        recyclerView.setAdapter(adapter);
 
         bindConnectionService();
     }
@@ -114,7 +154,6 @@ public class Room extends AppCompatActivity {
                             if (isHost) {
                                 // Add to local song queue
                                 // Emit to all clients
-                                // jukebox.enqueueSong(song);
                                 connectionService.emitSongAdded(song);
                                 connectionService.enqueueSong(song);
                             }
@@ -158,7 +197,7 @@ public class Room extends AppCompatActivity {
     }
 
     private void startAddActivity() {
-        Intent queueSong = new Intent(this, QueueSong.class);
+        Intent queueSong = new Intent(this, SongSearch.class);
         startActivityForResult(queueSong, ADD_SONG_REQUEST);
     }
 

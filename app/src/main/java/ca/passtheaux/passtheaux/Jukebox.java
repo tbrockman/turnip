@@ -18,7 +18,6 @@ public class Jukebox {
 
     public void enqueueSong(Song song) {
         songQueue.add(song);
-        Log.i("jukebox", String.valueOf(songQueue.size()));
     }
 
     public void playSong(Song song) {
@@ -27,6 +26,7 @@ public class Jukebox {
             Song next = it.next();
             if (next.equals(song)) {
                 it.remove();
+                jukeboxListener.onSongPlaying(next);
                 break;
             }
         }
@@ -52,5 +52,6 @@ public class Jukebox {
 
     public interface JukeboxListener {
         public void onSongPlaying(Song song);
+        public void onSongRemoved(Song song);
     }
 }
