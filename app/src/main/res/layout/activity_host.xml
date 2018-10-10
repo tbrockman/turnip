@@ -13,15 +13,19 @@
         android:orientation="vertical">
 
         <TableLayout
+            android:id="@+id/hostTable"
             android:layout_width="fill_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
             android:padding="20dp"
+            android:focusableInTouchMode="true"
+            android:focusable="true"
             tools:layout_editor_absoluteX="8dp"
-            tools:layout_editor_absoluteY="16dp">
+            tools:layout_editor_absoluteY="16dp"
+            >
 
             <TableRow
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="match_parent">
 
                 <android.support.design.widget.TextInputLayout
@@ -57,6 +61,36 @@
                         android:layout_width="fill_parent"
                         android:layout_height="wrap_content" />
                 </android.support.design.widget.TextInputLayout>
+            </TableRow>
+
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginTop="20dp">
+
+                <TextView
+                    android:id="@+id/spotifySwitchText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:padding="0dp"
+                    android:text="@string/spotify_switch_text"
+                    android:textAlignment="viewStart"
+                    android:textSize="18sp" />
+
+                <Switch
+                    android:id="@+id/spotifySwitch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end|center"
+                    android:checked="false"
+                    android:padding="0dp"
+                    android:showText="false"
+                    android:thumb="@drawable/ic_spotify_logo"
+                    android:thumbTint="#ffffff"
+                    tools:checked="true" />
             </TableRow>
 
         </TableLayout>

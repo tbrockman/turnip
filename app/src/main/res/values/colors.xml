@@ -6,4 +6,5 @@
     <color name="colorBackground">#191919</color>
     <color name="colorButtonBackgroundPrimary">#673ab7</color>
     <color name="colorButtonTextPrimary">#efebe9</color>
+    <color name="spotifyGreen">#1DB954</color>
 </resources>

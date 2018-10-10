@@ -45,8 +45,10 @@ class ServerJukebox extends Jukebox {
                             @Override
                             public void onEvent(PlayerState playerState) {
                                 // the Spotify App keeps you updated on PlayerState with this event
-                                Log.i(TAG, playerState.playbackPosition + "/" + playerState.track.duration);
-                                if (playerState.playbackPosition == playerState.track.duration) {
+                                Log.i(TAG, playerState.track.uri + "/" + getCurrentlyPlaying().getString("uri"));
+                                Song current = getCurrentlyPlaying();
+                                if (current != null &&
+                                    !playerState.track.uri.equals(current.getString("uri"))) {
                                     playNextSong();
                                 }
                             }

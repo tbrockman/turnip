@@ -28,6 +28,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -63,6 +66,19 @@ public class ConnectionService extends Service {
 
     private Jukebox jukebox;
 
+    private Jukebox.JukeboxListener jukeboxListener = new Jukebox.JukeboxListener() {
+        @Override
+        public void onSongPlaying(Song song) {
+            emitSongPlaying(connectedClients, song);
+            notifySongPlaying(song);
+        }
+
+        @Override
+        public void onSongRemoved(Song song) {
+            notifySongRemoved(song);
+        }
+    };
+
     public class LocalBinder extends Binder {
         ConnectionService getService() {
             return ConnectionService.this;
@@ -73,8 +89,17 @@ public class ConnectionService extends Service {
     public IBinder onBind(Intent intent) {
         context = this;
         connectionsClient = Nearby.getConnectionsClient(context);
-        jukebox = new ServerJukebox(context, jukeboxListener);
         return binder;
+    }
+
+    // Clean-up
+
+    public void initializeServerJukebox() {
+        jukebox = new ServerJukebox(context, jukeboxListener);
+    }
+
+    public void intializeRegularJukebox() {
+        jukebox = new Jukebox(jukeboxListener);
     }
 
     @Override
@@ -83,22 +108,16 @@ public class ConnectionService extends Service {
         super.onDestroy();
     }
 
+    public void destroyRoom() {
+        stopAdvertising();
+        stopDiscovery();
+        cancelLastRequest();
+        connectedClients.clear();
+        jukebox.turnOff();
+    }
 
-    // TODO: probably change these listeners
+    // TODO: probably refactor these listeners
     // Various subscriptions and listener notification functions
-
-    private Jukebox.JukeboxListener jukeboxListener = new Jukebox.JukeboxListener() {
-        @Override
-        public void onSongPlaying(Song song) {
-            emitSongPlaying(song);
-            notifySongPlaying(song);
-        }
-
-        @Override
-        public void onSongRemoved(Song song) {
-            notifySongRemoved(song);
-        }
-    };
 
     public void subscribeRoomFound(RoomFoundListener listener) {
         roomFoundListener = listener;
@@ -203,7 +222,7 @@ public class ConnectionService extends Service {
             try {
                 String token = raw.substring(0, 3);
                 String stringJson;
-                JSONObject jsonSong;
+                JSONObject jsonPayload;
                 Song song;
 
                 try {
@@ -214,17 +233,18 @@ public class ConnectionService extends Service {
                             setSpotifyToken(spotifyToken);
                             break;
                         // Someone has added a new song to the queue
-                        case "que":
+                        case "add":
                             stringJson = raw.substring(4);
-                            jsonSong = new JSONObject(stringJson);
-                            song = new SpotifySong(jsonSong);
+                            jsonPayload = new JSONObject(stringJson);
+                            song = new SpotifySong(jsonPayload);
                             enqueueSong(song);
                             break;
                         // Server playing a new song
                         case "ply":
                             stringJson = raw.substring(4);
-                            jsonSong = new JSONObject(stringJson);
-                            song = new SpotifySong(jsonSong);
+                            jsonPayload = new JSONObject(stringJson);
+                            // TODO: handle different song types
+                            song = new SpotifySong(jsonPayload);
                             jukebox.playSong(song);
                             break;
                         default:
@@ -266,6 +286,9 @@ public class ConnectionService extends Service {
                 Log.i(TAG, "Finished accepting connection from: " + endpointId);
                 connectedClients.add(endpointId);
                 sendSpotifyToken(endpointId, spotifyToken);
+                if (jukebox.getSongQueueLength() > 0) {
+                    sendClientSongQueue(endpointId, jukebox.getSongQueue());
+                }
             }
 
             @Override
@@ -374,10 +397,11 @@ public class ConnectionService extends Service {
     }
 
     public void connectToRoom(String endpointId) {
+        // TODO: better naming scheme than hardcoded 'test'
         connectionsClient.requestConnection("test", endpointId, clientConnectionLifecycleCallback);
     }
 
-    public void sendSpotifyToken(String endpointId, String spotifyToken) {
+    private void sendSpotifyToken(String endpointId, String spotifyToken) {
         String payload = "tok " + spotifyToken;
         sendPayload(endpointId, Payload.fromBytes(payload.getBytes()));
     }
@@ -385,14 +409,29 @@ public class ConnectionService extends Service {
     // Nearby network and jukebox song communication
 
     public void enqueueSong(Song song) {
-        jukebox.enqueueSong(song);
-        emitSongAdded(song);
         notifySongAdded(song);
+        jukebox.enqueueSong(song);
+        emitSongAdded(connectedClients, song);
     }
 
-    public void emitSongAdded(Song song) {
-        String payload = "que " + song.toString();
-        emitPayload(connectedClients, Payload.fromBytes(payload.getBytes()));
+    private void sendClientSongQueue(String endpointId, ArrayList<Song> songQueue) {
+        for (int i = 0; i < songQueue.size(); i++) {
+            // TODO: is the code reuse worth multiple payload sending overhead?
+            // Will this lead to race conditions when songs are added by one client
+            // while currently sending the queue to another?
+            // Max payload size is (allegedly) 32768 bytes, depending on song queue size
+            // we may not have a choice
+            sendSongAdded(endpointId, songQueue.get(i));
+        }
+    }
+
+    public void sendSongAdded(String endpointId, Song song) {
+        emitSongAdded(Collections.singletonList(endpointId), song);
+    }
+
+    public void emitSongAdded(List<String> clients, Song song) {
+        String payload = "add " + song.toString();
+        emitPayload(clients, Payload.fromBytes(payload.getBytes()));
     }
 
     public void addSong(Song song) {
@@ -400,20 +439,20 @@ public class ConnectionService extends Service {
         sendPayload(serverEndpoint, Payload.fromBytes(payload.getBytes()));
     }
 
-    public void emitSongPlaying(Song song) {
+    public void emitSongPlaying(List<String> clients, Song song) {
         String payload = "ply " + song.toString();
-        emitPayload(connectedClients, Payload.fromBytes(payload.getBytes()));
+        emitPayload(clients, Payload.fromBytes(payload.getBytes()));
     }
 
     private void sendPayload(String endpointId, Payload payload) {
-        connectionsClient.sendPayload(endpointId, payload);
+        emitPayload(Collections.singletonList(endpointId), payload);
     }
 
-    private void emitPayload(ArrayList<String> endpointIds, Payload payload) {
+    private void emitPayload(List<String> endpointIds, Payload payload) {
         connectionsClient.sendPayload(endpointIds, payload);
     }
 
-    // Spotify API related functions
+    // Spotify related functions
 
     public void searchSpotifyAPI(String search, String type, Callback callback) {
         final Request request = new Request.Builder()
@@ -429,14 +468,6 @@ public class ConnectionService extends Service {
         if (lastRequest != null) {
             lastRequest.cancel();
         }
-    }
-
-    public void destroyRoom() {
-        stopAdvertising();
-        stopDiscovery();
-        cancelLastRequest();
-        connectedClients.clear();
-        jukebox.turnOff();
     }
 
     protected static class Endpoint {

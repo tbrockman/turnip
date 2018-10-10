@@ -20,6 +20,8 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -38,6 +40,12 @@ public class SongSearch extends AppCompatActivity {
     // Search results
 
     private ArrayList<Song> songs = new ArrayList<>();
+
+    // Search delay
+
+    Timer searchTimer;
+    TimerTask searchTask;
+    private static final int searchDelay = 300;
 
     // Network
 
@@ -113,6 +121,7 @@ public class SongSearch extends AppCompatActivity {
         setContentView(R.layout.activity_queue_song);
         bindConnectionService();
 
+        searchTimer = new Timer();
         searchBar = (MaterialSearchBar) findViewById(R.id.searchBar);
         searchBar.addTextChangeListener(new TextWatcher() {
             @Override
@@ -120,9 +129,19 @@ public class SongSearch extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                connectionService.searchSpotifyAPI(searchBar.getText(),
-                                              "track",
-                                                    spotifySearchCallback);
+                if (searchTask != null) {
+                    searchTask.cancel();
+
+                }
+                searchTask = new TimerTask() {
+                    @Override
+                    public void run() {
+                        connectionService.searchSpotifyAPI(searchBar.getText(),
+                                "track",
+                                spotifySearchCallback);
+                    }
+                };
+                searchTimer.schedule(searchTask, searchDelay);
             }
 
             @Override

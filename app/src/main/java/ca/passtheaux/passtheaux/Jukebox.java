@@ -25,8 +25,8 @@ public class Jukebox {
         while (it.hasNext()) {
             Song next = it.next();
             if (next.equals(song)) {
-                it.remove();
-                jukeboxListener.onSongPlaying(next);
+                jukeboxListener.onSongRemoved(next);
+                songQueue.remove(next);
                 break;
             }
         }
@@ -45,6 +45,8 @@ public class Jukebox {
     public Song getNextSong() {
         return this.songQueue.get(0);
     }
+
+    public ArrayList<Song> getSongQueue() { return this.songQueue; }
 
     public int getSongQueueLength() {
         return this.songQueue.size();

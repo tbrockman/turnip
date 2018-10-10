@@ -38,7 +38,8 @@ public class SongQueueAdapter extends RecyclerView.Adapter<SongQueueAdapter.Song
         // SongViewHolder.
         Song song = songQueue.get(i);
         songViewHolder.songName.setText(song.getString("name"));
-        songViewHolder.artist.setText(TextUtils.join(",", song.getArtists()));
+        songViewHolder.artist.setText(TextUtils.join(", ", song.getArtists()));
+        songViewHolder.albumArt.setImageBitmap(song.getAlbumArt());
     }
 
     @Override
@@ -51,6 +52,7 @@ public class SongQueueAdapter extends RecyclerView.Adapter<SongQueueAdapter.Song
         TextView songName;
         TextView artist;
         ImageView albumArt;
+        ImageView plusSign;
 
         SongViewHolder self = this;
 
@@ -59,12 +61,15 @@ public class SongQueueAdapter extends RecyclerView.Adapter<SongQueueAdapter.Song
             songName = (TextView) itemView.findViewById(R.id.songName);
             artist = (TextView) itemView.findViewById(R.id.artist);
             albumArt = (ImageView) itemView.findViewById(R.id.albumArt);
+            plusSign = (ImageView) itemView.findViewById(R.id.addSongPlus);
 
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                 }
             });
+
+            plusSign.setVisibility(View.INVISIBLE);
         }
     }
 

@@ -5,4 +5,6 @@
     <string name="start_button_text">Start</string>
     <string name="room_name_hint">Room name</string>
     <string name="room_password_hint">Room password</string>
+    <string name="spotify_logo">Spotify logo</string>
+    <string name="spotify_switch_text">Play songs from Spotify</string>
 </resources>

@@ -21,7 +21,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 
-public class SongSuggestionsAdapter extends SuggestionsAdapter<Song, SongSuggestionsAdapter.SuggestionHolder> {
+public class SongSuggestionsAdapter extends SuggestionsAdapter<Song,
+                                        SongSuggestionsAdapter.SuggestionHolder> {
 
     private static final String TAG = SongSuggestionsAdapter.class.getSimpleName();
 
@@ -40,7 +41,7 @@ public class SongSuggestionsAdapter extends SuggestionsAdapter<Song, SongSuggest
     public void onBindSuggestionHolder(Song suggestion, SuggestionHolder holder, int position) {
 
         holder.songName.setText(suggestion.getString("name"));
-        holder.artist.setText(TextUtils.join(",", suggestion.getArtists()));
+        holder.artist.setText(TextUtils.join(", ", suggestion.getArtists()));
 
         try {
             if (!suggestion.hasAlbumArt()) {

@@ -35,6 +35,7 @@ public class Room extends AppCompatActivity {
 
     // Intent extras
     private boolean isHost;
+    private int expiresIn;
     private String roomName;
     private String roomPassword;
     private String spotifyToken;
@@ -51,11 +52,12 @@ public class Room extends AppCompatActivity {
             if (connectionService != null) {
                 if (isHost) {
                     connectionService.setSpotifyToken(spotifyToken);
+                    connectionService.initializeServerJukebox();
                     connectionService.startAdvertising(roomName);
                 }
                 else {
-                    Log.i(TAG, "attempting to connect to room");
                     connectionService.connectToRoom(endpointId);
+                    connectionService.intializeRegularJukebox();
                 }
                 connectionService.subscribeSongQueue(songQueueListener);
             }
@@ -81,8 +83,10 @@ public class Room extends AppCompatActivity {
         @Override
         public void onSongRemoved(Song song) {
             int index = songQueue.indexOf(song);
-            songQueue.remove(index);
-            adapter.notifyItemRemoved(index);
+            if (index > -1) {
+                songQueue.remove(index);
+                adapter.notifyItemRemoved(index);
+            }
         }
 
         @Override
@@ -102,6 +106,7 @@ public class Room extends AppCompatActivity {
         roomPassword = intent.getStringExtra("roomPassword");
         endpointId = intent.getStringExtra("endpointId");
         spotifyToken = intent.getStringExtra("spotifyToken");
+        expiresIn = intent.getIntExtra("expiresIn", 60 * 60 * 2);
 
         setTitle(roomName);
 
@@ -129,8 +134,9 @@ public class Room extends AppCompatActivity {
         if (this.isHost) {
             Log.i(TAG, "Calling onDestroy here");
             connectionService.stopAdvertising();
-            connectionService.destroyRoom();
         }
+        connectionService.destroyRoom();
+        unbindConnectionService();
         super.onDestroy();
     }
 
@@ -152,9 +158,7 @@ public class Room extends AppCompatActivity {
 
                         if (song != null) {
                             if (isHost) {
-                                // Add to local song queue
-                                // Emit to all clients
-                                connectionService.emitSongAdded(song);
+                                // Add to local song queue and emit to all clients
                                 connectionService.enqueueSong(song);
                             }
                             else {
@@ -188,6 +192,7 @@ public class Room extends AppCompatActivity {
             i.putExtra("roomName", roomName);
             i.putExtra("roomPassword", roomPassword);
             i.putExtra("spotifyToken", spotifyToken);
+            i.putExtra("expiresIn", expiresIn);
         } else {
             i = new Intent(this, RoomList.class);
             i.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
