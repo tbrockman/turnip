@@ -2,10 +2,12 @@ package ca.passtheaux.passtheaux;
 
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -52,14 +54,12 @@ public class Room extends AppCompatActivity {
             if (connectionService != null) {
                 if (isHost) {
                     connectionService.setSpotifyToken(spotifyToken);
-                    connectionService.initializeServerJukebox();
                     connectionService.startAdvertising(roomName);
                 }
                 else {
                     connectionService.connectToRoom(endpointId);
-                    connectionService.intializeRegularJukebox();
                 }
-                connectionService.subscribeSongQueue(songQueueListener);
+                connectionService.subscribeRoomNetwork(songQueueListener);
             }
         }
 
@@ -72,10 +72,9 @@ public class Room extends AppCompatActivity {
     // Song queue
     private Song currentlyPlaying;
     private ArrayList<Song> songQueue;
-    private ConnectionService.SongQueueListener songQueueListener = new ConnectionService.SongQueueListener() {
+    private ConnectionService.RoomNetworkListener songQueueListener = new ConnectionService.RoomNetworkListener() {
         @Override
         public void onSongAdded(Song song) {
-            Log.i(TAG, "heard song added");
             songQueue.add(song);
             adapter.notifyItemInserted(songQueue.size() - 1);
         }
@@ -83,6 +82,7 @@ public class Room extends AppCompatActivity {
         @Override
         public void onSongRemoved(Song song) {
             int index = songQueue.indexOf(song);
+            Log.i(TAG, "heard song removed?? " + index);
             if (index > -1) {
                 songQueue.remove(index);
                 adapter.notifyItemRemoved(index);
@@ -92,6 +92,24 @@ public class Room extends AppCompatActivity {
         @Override
         public void onSongPlaying(Song song) {
             currentlyPlaying = song;
+        }
+
+        @Override
+        public void onDisconnect() {
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            builder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.cancel();
+                    finish();
+                }
+            });
+            builder.setCancelable(false);
+            builder.setTitle("Disconnected");
+            builder.setMessage("Lost connection to host.");
+            builder.create();
+            builder.show();
         }
     };
 
@@ -135,8 +153,10 @@ public class Room extends AppCompatActivity {
             Log.i(TAG, "Calling onDestroy here");
             connectionService.stopAdvertising();
         }
+        Log.i(TAG, "calling Room on destroy now");
+        connectionService.unsubscribeRoomNetwork();
         connectionService.destroyRoom();
-        unbindConnectionService();
+        unbindService(connection);
         super.onDestroy();
     }
 
@@ -208,12 +228,10 @@ public class Room extends AppCompatActivity {
 
     private void bindConnectionService() {
         Intent serviceIntent = new Intent(this, ConnectionService.class);
+        serviceIntent.putExtra("isHost", isHost);
+        serviceIntent.putExtra("inRoom", true);
         bindService(serviceIntent,
                     connection,
                     Context.BIND_AUTO_CREATE);
-    }
-
-    private void unbindConnectionService() {
-        this.unbindService(connection);
     }
 }

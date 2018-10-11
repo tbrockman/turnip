@@ -4,12 +4,17 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.drawable.Drawable;
+import android.support.design.widget.TextInputEditText;
+import android.support.design.widget.TextInputLayout;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Switch;
@@ -34,6 +39,8 @@ public class Host extends AppCompatActivity {
 
     private TableLayout table;
     private Switch spotifySwitch;
+    private Button startButton;
+    private TextInputEditText roomName;
 
     private Context context = this;
 
@@ -42,12 +49,51 @@ public class Host extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         context = this;
         setContentView(R.layout.activity_host);
+        initializeRoomNameField();
+        initializeStartButton();
         initializeSwitch();
         initializeTable();
         // TODO: retrieve data in intents from potentially previous created room
     }
 
-    public void initializeSwitch() {
+    private void initializeStartButton() {
+        startButton = findViewById(R.id.startButton);
+        disableButton(startButton);
+    }
+
+    public void disableButton(Button button) {
+        button.setEnabled(false);
+        button.setAlpha((float) 0.25);
+    }
+
+    public void enableButton(Button button) {
+        button.setEnabled(true);
+        button.setAlpha(1);
+    }
+
+    private void initializeRoomNameField() {
+        roomName = findViewById(R.id.roomName);
+        roomName.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                Log.i(TAG, "Length: " + s.length());
+                if (before == 0 && s.length() > 0) {
+                    enableButton(startButton);
+                }
+                else if (before > 0 && s.length() == 0) {
+                    disableButton(startButton);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+    }
+
+    private void initializeTable() {
         table = findViewById(R.id.hostTable);
         table.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -68,7 +114,7 @@ public class Host extends AppCompatActivity {
         });
     }
 
-    public void initializeTable() {
+    private void initializeSwitch() {
         spotifySwitch = findViewById(R.id.spotifySwitch);
         ColorStateList colorStateList = new ColorStateList(
                 new int[][] {
@@ -86,6 +132,9 @@ public class Host extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     authenticateSpotify();
+                }
+                else {
+                    spotifyToken = null;
                 }
             }
         });

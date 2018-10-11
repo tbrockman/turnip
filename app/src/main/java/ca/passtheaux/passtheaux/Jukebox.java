@@ -36,6 +36,7 @@ public class Jukebox {
 
     public void turnOff() {
         songQueue.clear();
+        jukeboxListener = null;
     }
 
     public Song getCurrentlyPlaying() {

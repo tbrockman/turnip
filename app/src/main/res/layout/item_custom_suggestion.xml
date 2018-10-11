@@ -53,11 +53,11 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <ImageView
+        <android.support.v7.widget.AppCompatImageView
             android:id="@+id/addSongPlus"
             android:layout_width="25dp"
             android:layout_height="match_parent"
-            android:tint="@color/colorButtonTextPrimary"
-            app:srcCompat="@drawable/ic_outline_add_24px" />
+            android:tint="@color/colorPrimaryLight"
+            android:src="@drawable/ic_outline_add_24px" />
     </LinearLayout>
 </android.support.constraint.ConstraintLayout>

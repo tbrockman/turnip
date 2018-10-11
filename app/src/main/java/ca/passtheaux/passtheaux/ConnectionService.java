@@ -28,7 +28,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -42,10 +41,12 @@ public class ConnectionService extends Service {
 
     private static final String TAG = ConnectionService.class.getSimpleName();
 
-    // Service binder and context
+    // Binder, context, and context variables
 
     private final IBinder binder = new LocalBinder();
     private Context context;
+    private boolean isHost;
+    private boolean inRoom;
 
     // Network communication
 
@@ -60,7 +61,7 @@ public class ConnectionService extends Service {
 
     private RoomFoundListener roomFoundListener;
     private RoomLostListener roomLostListener;
-    private SongQueueListener songQueueListener;
+    private RoomNetworkListener roomNetworkListener;
 
     // Jukebox
 
@@ -89,18 +90,22 @@ public class ConnectionService extends Service {
     public IBinder onBind(Intent intent) {
         context = this;
         connectionsClient = Nearby.getConnectionsClient(context);
+        isHost = intent.getBooleanExtra("isHost", false);
+        inRoom = intent.getBooleanExtra("inRoom", false);
+
+        if (inRoom) {
+            if (isHost) {
+                jukebox = new ServerJukebox(context, jukeboxListener);
+            }
+            else {
+                jukebox = new Jukebox(jukeboxListener);
+            }
+        }
+
         return binder;
     }
 
     // Clean-up
-
-    public void initializeServerJukebox() {
-        jukebox = new ServerJukebox(context, jukeboxListener);
-    }
-
-    public void intializeRegularJukebox() {
-        jukebox = new Jukebox(jukeboxListener);
-    }
 
     @Override
     public void onDestroy() {
@@ -109,9 +114,10 @@ public class ConnectionService extends Service {
     }
 
     public void destroyRoom() {
-        stopAdvertising();
-        stopDiscovery();
         cancelLastRequest();
+        stopAdvertising();
+        unsubscribeRoomNetwork();
+        connectionsClient.stopAllEndpoints();
         connectedClients.clear();
         jukebox.turnOff();
     }
@@ -145,25 +151,31 @@ public class ConnectionService extends Service {
         }
     }
 
-    public void subscribeSongQueue(SongQueueListener listener) { songQueueListener = listener; }
+    public void subscribeRoomNetwork(RoomNetworkListener listener) { roomNetworkListener = listener; }
 
-    public void unsubscribeSongQueue() { songQueueListener = null; }
+    public void unsubscribeRoomNetwork() { roomNetworkListener = null; }
 
     private void notifySongAdded(Song song) {
-        if (songQueueListener != null) {
-            songQueueListener.onSongAdded(song);
+        if (roomNetworkListener != null) {
+            roomNetworkListener.onSongAdded(song);
         }
     }
 
     private void notifySongRemoved(Song song) {
-        if (songQueueListener != null) {
-            songQueueListener.onSongRemoved(song);
+        if (roomNetworkListener != null) {
+            roomNetworkListener.onSongRemoved(song);
         }
     }
 
     private void notifySongPlaying(Song song) {
-        if (songQueueListener != null) {
-            songQueueListener.onSongPlaying(song);
+        if (roomNetworkListener != null) {
+            roomNetworkListener.onSongPlaying(song);
+        }
+    }
+
+    private void notifyDisconnected() {
+        if (roomNetworkListener != null) {
+            roomNetworkListener.onDisconnect();
         }
     }
 
@@ -320,6 +332,7 @@ public class ConnectionService extends Service {
             @Override
             public void onDisconnected(@NonNull String endpointId) {
                 Log.i(TAG, "Connection disconnected: " + endpointId);
+                notifyDisconnected();
             }
         };
 
@@ -409,9 +422,15 @@ public class ConnectionService extends Service {
     // Nearby network and jukebox song communication
 
     public void enqueueSong(Song song) {
-        notifySongAdded(song);
-        jukebox.enqueueSong(song);
-        emitSongAdded(connectedClients, song);
+        if (jukebox.getCurrentlyPlaying() != null) {
+            // TODO: jukebox should probably do notification itself
+            notifySongAdded(song);
+            jukebox.enqueueSong(song);
+            emitSongAdded(connectedClients, song);
+        }
+        else {
+            jukebox.playSong(song);
+        }
     }
 
     private void sendClientSongQueue(String endpointId, ArrayList<Song> songQueue) {
@@ -424,6 +443,10 @@ public class ConnectionService extends Service {
             sendSongAdded(endpointId, songQueue.get(i));
         }
     }
+
+    // TODO: this works for now, but in the future think about a better way of
+    // sending payloads then by having to convert json object to string
+    // AND THEN convert concatenated string to bytes
 
     public void sendSongAdded(String endpointId, Song song) {
         emitSongAdded(Collections.singletonList(endpointId), song);
@@ -515,9 +538,10 @@ public class ConnectionService extends Service {
         public void onRoomLost(String endpointId);
     }
 
-    protected interface SongQueueListener {
+    protected interface RoomNetworkListener {
         public void onSongAdded(Song song);
         public void onSongRemoved(Song song);
         public void onSongPlaying(Song song);
+        public void onDisconnect();
     }
 }

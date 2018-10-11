@@ -34,17 +34,17 @@ public class SongSearch extends AppCompatActivity {
     // UI
 
     private MaterialSearchBar searchBar;
-    LayoutInflater inflater;
-    SongSuggestionsAdapter customSuggestionsAdapater;
+    private LayoutInflater inflater;
+    private SongSuggestionsAdapter customSuggestionsAdapter;
 
     // Search results
 
-    private ArrayList<Song> songs = new ArrayList<>();
+    private ArrayList<Song> songs;
 
     // Search delay
 
-    Timer searchTimer;
-    TimerTask searchTask;
+    private Timer searchTimer;
+    private TimerTask searchTask;
     private static final int searchDelay = 300;
 
     // Network
@@ -61,6 +61,47 @@ public class SongSearch extends AppCompatActivity {
             connectionService = null;
         }
     };
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_queue_song);
+        bindConnectionService();
+
+        songs = new ArrayList<>();
+        searchTimer = new Timer();
+        searchBar = (MaterialSearchBar) findViewById(R.id.searchBar);
+        searchBar.addTextChangeListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                if (searchTask != null) {
+                    searchTask.cancel();
+
+                }
+                searchTask = new TimerTask() {
+                    @Override
+                    public void run() {
+                        connectionService.searchSpotifyAPI(searchBar.getText(),
+                                                          "track",
+                                                           spotifySearchCallback);
+                    }
+                };
+                searchTimer.schedule(searchTask, searchDelay);
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {}
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unbindService(connection);
+    }
 
     // Search result click listener
 
@@ -100,10 +141,10 @@ public class SongSearch extends AppCompatActivity {
                             songs.add(song);
                         }
                         inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
-                        customSuggestionsAdapater = new SongSuggestionsAdapter(inflater,
+                        customSuggestionsAdapter = new SongSuggestionsAdapter(inflater,
                                                                                  songClickedCallback);
-                        searchBar.setCustomSuggestionAdapter(customSuggestionsAdapater);
-                        customSuggestionsAdapater.setSuggestions(songs);
+                        customSuggestionsAdapter.setSuggestions(songs);
+                        searchBar.setCustomSuggestionAdapter(customSuggestionsAdapter);
                         searchBar.showSuggestionsList();
                     } catch (JSONException e) {
                         Log.e(TAG, "Error converting search response body to JSON.");
@@ -115,46 +156,6 @@ public class SongSearch extends AppCompatActivity {
         }
     };
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_queue_song);
-        bindConnectionService();
-
-        searchTimer = new Timer();
-        searchBar = (MaterialSearchBar) findViewById(R.id.searchBar);
-        searchBar.addTextChangeListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
-
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                if (searchTask != null) {
-                    searchTask.cancel();
-
-                }
-                searchTask = new TimerTask() {
-                    @Override
-                    public void run() {
-                        connectionService.searchSpotifyAPI(searchBar.getText(),
-                                "track",
-                                spotifySearchCallback);
-                    }
-                };
-                searchTimer.schedule(searchTask, searchDelay);
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {}
-        });
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        unbindService(connection);
-    }
-
     private void bindConnectionService() {
         Intent serviceIntent = new Intent(this, ConnectionService.class);
         bindService(serviceIntent,
@@ -163,6 +164,6 @@ public class SongSearch extends AppCompatActivity {
     }
 
     protected interface SongClickedCallback {
-        public void songChosen(int pos);
+        void songChosen(int pos);
     }
 }

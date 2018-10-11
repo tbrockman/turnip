@@ -44,9 +44,9 @@ class ServerJukebox extends Jukebox {
                         .setEventCallback(new Subscription.EventCallback<PlayerState>() {
                             @Override
                             public void onEvent(PlayerState playerState) {
-                                // the Spotify App keeps you updated on PlayerState with this event
-                                Log.i(TAG, playerState.track.uri + "/" + getCurrentlyPlaying().getString("uri"));
                                 Song current = getCurrentlyPlaying();
+                                // Check to see if Spotify automatically started playing another song
+                                // i.e, our current song finished playing. If so, override it
                                 if (current != null &&
                                     !playerState.track.uri.equals(current.getString("uri"))) {
                                     playNextSong();
@@ -70,17 +70,6 @@ class ServerJukebox extends Jukebox {
     }
 
     @Override
-    public void enqueueSong(Song song) {
-        super.enqueueSong(song);
-        if (super.getCurrentlyPlaying() == null) {
-            playSong(song);
-        }
-        else {
-            Log.i(TAG, super.getCurrentlyPlaying().toString());
-        }
-    }
-
-    @Override
     public void playSong(Song song) {
         super.playSong(song);
         if (spotifyIsConnected) {
@@ -90,8 +79,6 @@ class ServerJukebox extends Jukebox {
 
     public void playNextSong() {
         Song next = getNextSong();
-        // TODO: if next is null at some point we'll probably want to implement
-        // filling the queue with other songs.
         if (next != null) {
             playSong(next);
         }

@@ -68,8 +68,11 @@
                         <option name="values">
                           <map>
                             <entry key="assetSourceType" value="FILE" />
-                            <entry key="outputName" value="ic_spotify_logo" />
-                            <entry key="sourceFile" value="C:\Users\Theodore\Downloads\Spotify_logo_without_text.svg" />
+                            <entry key="height" value="250" />
+                            <entry key="outputName" value="ic_logo_svg" />
+                            <entry key="overrideSize" value="true" />
+                            <entry key="sourceFile" value="H:\Workspace\passtheaux\logo-svg.svg" />
+                            <entry key="width" value="250" />
                           </map>
                         </option>
                       </PersistentState>

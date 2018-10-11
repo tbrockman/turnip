@@ -27,35 +27,9 @@ public class RoomList extends AppCompatActivity {
     private RecyclerView recyclerView;
     private RecyclerView.Adapter adapter;
     private RecyclerView.LayoutManager layoutManager;
-    private ArrayList<ConnectionService.Endpoint> rooms = new ArrayList<>();
+    private ArrayList<ConnectionService.Endpoint> rooms;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_room_list);
-        bindConnectionService();
-
-        recyclerView = (RecyclerView) findViewById(R.id.roomRecyclerView);
-        layoutManager = new LinearLayoutManager(this);
-        adapter = new RoomListAdapter(rooms);
-
-        recyclerView.setLayoutManager(layoutManager);
-        recyclerView.setAdapter(adapter);
-
-        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(recyclerView.getContext(),
-                layoutManager.getLayoutDirection());
-        dividerItemDecoration.setDrawable(ContextCompat.getDrawable(recyclerView.getContext(), R.drawable.room_list_divider));
-        recyclerView.addItemDecoration(dividerItemDecoration);
-    }
-
-    @Override
-    protected void onDestroy() {
-        if (boundService != null) {
-            boundService.unsubscribeRoomFound();
-        }
-        unbindConnectionService();
-        super.onDestroy();
-    }
+    // Room list listeners
 
     private ServiceConnection connection = new ServiceConnection() {
 
@@ -75,18 +49,16 @@ public class RoomList extends AppCompatActivity {
                 @Override
                 public void onRoomLost(String endpointId) {
                     Iterator<ConnectionService.Endpoint> it = rooms.iterator();
-                    int pos = 0;
-
+                    Log.i(TAG, "room lost: " + endpointId);
                     while (it.hasNext()) {
                         ConnectionService.Endpoint current = it.next();
                         Log.i(TAG, current.toString() + " " + endpointId);
 
                         if (current.getId().equals(endpointId)) {
                             it.remove();
-                            adapter.notifyItemRemoved(pos);
                         }
-                        pos++;
                     }
+                    adapter.notifyDataSetChanged();
                 }
             });
 
@@ -99,14 +71,40 @@ public class RoomList extends AppCompatActivity {
         }
     };
 
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_room_list);
+        bindConnectionService();
+
+        rooms = new ArrayList<>();
+
+        recyclerView = (RecyclerView) findViewById(R.id.roomRecyclerView);
+        layoutManager = new LinearLayoutManager(this);
+        adapter = new RoomListAdapter(rooms);
+
+        recyclerView.setLayoutManager(layoutManager);
+        recyclerView.setAdapter(adapter);
+
+        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(recyclerView.getContext(),
+                DividerItemDecoration.VERTICAL);
+        //dividerItemDecoration.setDrawable(ContextCompat.getDrawable(recyclerView.getContext(), R.drawable.room_list_divider));
+        recyclerView.addItemDecoration(dividerItemDecoration);
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (boundService != null) {
+            boundService.unsubscribeRoomFound();
+        }
+        unbindService(connection);
+        super.onDestroy();
+    }
+
     private void bindConnectionService() {
         Intent serviceIntent = new Intent(this, ConnectionService.class);
         bindService(serviceIntent,
-                connection,
-                Context.BIND_AUTO_CREATE);
-    }
-
-    private void unbindConnectionService() {
-        this.unbindService(connection);
+                    connection,
+                    Context.BIND_AUTO_CREATE);
     }
 }
