@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="ca.passtheaux.passtheaux">
+    package="ca.passtheaux.turnip">
 
     <!-- Required for Nearby Connections -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
@@ -11,18 +11,18 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_logo_svg"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <service
-            android:name=".ConnectionService"
+            android:name="ca.passtheaux.turnip.ConnectionService"
             android:enabled="true"
             android:exported="true"
             android:stopWithTask="true" />
         <activity
-            android:name=".Main"
+            android:name="ca.passtheaux.turnip.Main"
             android:theme="@style/Empty">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -31,22 +31,22 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".Host"
+            android:name="ca.passtheaux.turnip.Host"
             android:label="@string/title_activity_host"
-            android:parentActivityName=".Main"
+            android:parentActivityName="ca.passtheaux.turnip.Main"
             android:theme="@style/AppActionBarActivityTheme" />
         <activity
-            android:name=".Room"
+            android:name="ca.passtheaux.turnip.Room"
             android:label="Room"
-            android:parentActivityName=".Main"
+            android:parentActivityName="ca.passtheaux.turnip.Main"
             android:theme="@style/AppActionBarActivityTheme" />
         <activity
-            android:name=".RoomList"
+            android:name="ca.passtheaux.turnip.RoomList"
             android:label="Rooms"
-            android:parentActivityName=".Main"
+            android:parentActivityName="ca.passtheaux.turnip.Main"
             android:theme="@style/AppActionBarActivityTheme" />
         <activity
-            android:name=".SongSearch"
+            android:name="ca.passtheaux.turnip.SongSearch"
             android:theme="@style/Empty"/>
     </application>
 

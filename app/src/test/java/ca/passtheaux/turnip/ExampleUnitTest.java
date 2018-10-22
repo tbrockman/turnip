@@ -1,4 +1,4 @@
-package ca.passtheaux.passtheaux;
+package ca.passtheaux.turnip;
 
 import org.junit.Test;
 

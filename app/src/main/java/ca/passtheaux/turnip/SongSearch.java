@@ -1,4 +1,4 @@
-package ca.passtheaux.passtheaux;
+package ca.passtheaux.turnip;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -142,7 +142,7 @@ public class SongSearch extends AppCompatActivity {
                         }
                         inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
                         customSuggestionsAdapter = new SongSuggestionsAdapter(inflater,
-                                                                                 songClickedCallback);
+                                                                              songClickedCallback);
                         customSuggestionsAdapter.setSuggestions(songs);
                         searchBar.setCustomSuggestionAdapter(customSuggestionsAdapter);
                         searchBar.showSuggestionsList();
@@ -159,8 +159,8 @@ public class SongSearch extends AppCompatActivity {
     private void bindConnectionService() {
         Intent serviceIntent = new Intent(this, ConnectionService.class);
         bindService(serviceIntent,
-                connection,
-                Context.BIND_AUTO_CREATE);
+                    connection,
+                    Context.BIND_AUTO_CREATE);
     }
 
     protected interface SongClickedCallback {

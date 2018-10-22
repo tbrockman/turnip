@@ -1,4 +1,4 @@
-package ca.passtheaux.passtheaux;
+package ca.passtheaux.turnip;
 
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
@@ -8,6 +8,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 
@@ -40,6 +44,21 @@ public class SongQueueAdapter extends RecyclerView.Adapter<SongQueueAdapter.Song
         songViewHolder.songName.setText(song.getString("name"));
         songViewHolder.artist.setText(TextUtils.join(", ", song.getArtists()));
         songViewHolder.albumArt.setImageBitmap(song.getAlbumArt());
+        try {
+            if (!song.hasAlbumArt()) {
+                JSONObject album = song.get("album");
+                JSONArray albumImages = album.getJSONArray("images");
+                JSONObject imageInfoJSON = albumImages.getJSONObject(albumImages.length()-1);
+                String albumArtUrl = imageInfoJSON.getString("url");
+                Thread retrieveAlbumArt = new Thread(
+                                             new RetrieveAlbumArtThread(song,
+                                                                        albumArtUrl,
+                                                                        songViewHolder.albumArt));
+                retrieveAlbumArt.start();
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override

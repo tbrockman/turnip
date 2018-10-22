@@ -1,4 +1,4 @@
-package ca.passtheaux.passtheaux;
+package ca.passtheaux.turnip;
 
 import android.app.Service;
 import android.content.Context;
@@ -23,23 +23,35 @@ import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
 import com.google.android.gms.nearby.connection.Strategy;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 import okhttp3.Call;
 import okhttp3.Callback;
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
+
+import static ca.passtheaux.turnip.Main.API_ENDPOINT;
 
 
 public class ConnectionService extends Service {
 
     private static final String TAG = ConnectionService.class.getSimpleName();
+    public static final MediaType JSON
+            = MediaType.parse("application/json; charset=utf-8");
 
     // Binder, context, and context variables
 
@@ -47,20 +59,27 @@ public class ConnectionService extends Service {
     private Context context;
     private boolean isHost;
     private boolean inRoom;
+    private boolean isDiscovering = false;
 
     // Network communication
 
     private final ArrayList<String> connectedClients = new ArrayList();
+    private final ArrayList<Endpoint> discoveredHosts = new ArrayList();
     private final OkHttpClient okHttpClient = new OkHttpClient();
     private String serverEndpoint;
     private ConnectionsClient connectionsClient;
-    private String spotifyToken;
     private Call lastRequest;
+
+    // Token storage and encryption
+
+    private Encryptor encryptor;
+    private Decryptor decryptor;
+    private String spotifyAccessToken;
+    private String spotifyRefreshToken;
 
     // Potential listeners
 
-    private RoomFoundListener roomFoundListener;
-    private RoomLostListener roomLostListener;
+    private RoomListListener roomListListener;
     private RoomNetworkListener roomNetworkListener;
 
     // Jukebox
@@ -90,19 +109,29 @@ public class ConnectionService extends Service {
     public IBinder onBind(Intent intent) {
         context = this;
         connectionsClient = Nearby.getConnectionsClient(context);
-        isHost = intent.getBooleanExtra("isHost", false);
-        inRoom = intent.getBooleanExtra("inRoom", false);
-
-        if (inRoom) {
-            if (isHost) {
-                jukebox = new ServerJukebox(context, jukeboxListener);
-            }
-            else {
-                jukebox = new Jukebox(jukeboxListener);
-            }
+        encryptor = new Encryptor();
+        try {
+            decryptor = new Decryptor();
+        } catch (CertificateException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (KeyStoreException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-
         return binder;
+    }
+
+    public void setUpJukebox(boolean isHost) {
+        this.isHost = isHost;
+        if (isHost) {
+            jukebox = new ServerJukebox(context, jukeboxListener);
+        }
+        else {
+            jukebox = new Jukebox(jukeboxListener);
+        }
     }
 
     // Clean-up
@@ -115,39 +144,34 @@ public class ConnectionService extends Service {
 
     public void destroyRoom() {
         cancelLastRequest();
-        stopAdvertising();
-        unsubscribeRoomNetwork();
-        connectionsClient.stopAllEndpoints();
+        if (isHost) {
+            connectionsClient.stopAllEndpoints();
+        } else {
+            connectionsClient.disconnectFromEndpoint(serverEndpoint);
+        }
         connectedClients.clear();
-        jukebox.turnOff();
+        if (jukebox != null) {
+            jukebox.turnOff();
+        }
     }
 
     // TODO: probably refactor these listeners
     // Various subscriptions and listener notification functions
 
-    public void subscribeRoomFound(RoomFoundListener listener) {
-        roomFoundListener = listener;
-    }
+    public void subscribeRoomListListener(RoomListListener listener) { roomListListener = listener; }
 
-    public void unsubscribeRoomFound() {
-        roomFoundListener = null;
+    public void unsubscribeRoomListListener() { roomListListener = null; }
+
+    private void notifyHostLost(String endpointId) {
+        if (roomListListener != null) {
+            roomListListener.onRoomLost(endpointId);
+        }
     }
 
     private void notifyHostFound(Endpoint host) {
         Log.i(TAG, host.toString());
-        if (roomFoundListener != null) {
-            roomFoundListener.onRoomFound(host);
-        }
-    }
-
-    public void subscribeRoomLost(RoomLostListener listener) { roomLostListener = listener; }
-
-    public void unsubscribeRoomLost() { roomLostListener = null; }
-
-    private void notifyHostLost(String endpointId) {
-        Log.i(TAG, "Host lost: " + endpointId);
-        if (roomLostListener != null) {
-            roomLostListener.onRoomLost(endpointId);
+        if (roomListListener != null) {
+            roomListListener.onRoomFound(host);
         }
     }
 
@@ -179,14 +203,22 @@ public class ConnectionService extends Service {
         }
     }
 
-    // Spotify token getter/setter
+    // Spotify tokens getter/setters
 
-    public void setSpotifyToken(String spotifyToken) {
-        this.spotifyToken = spotifyToken;
+    public void setSpotifyAccessToken(String spotifyAccessToken) {
+        this.spotifyAccessToken = spotifyAccessToken;
     }
 
-    public String getSpotifyToken() {
-        return spotifyToken;
+    public String getSpotifyAccessToken() {
+        return spotifyAccessToken;
+    }
+
+    public String getSpotifyRefreshToken() {
+        return spotifyRefreshToken;
+    }
+
+    public void setSpotifyRefreshToken(String spotifyRefreshToken) {
+        this.spotifyRefreshToken = spotifyRefreshToken;
     }
 
     // Server payload logic
@@ -213,7 +245,7 @@ public class ConnectionService extends Service {
                     Log.e(TAG, "Error parsing JSON object in received payload.");
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Invalid length payload.");
+                Log.e(TAG, e.toString());
             }
         }
 
@@ -242,7 +274,7 @@ public class ConnectionService extends Service {
                         // We're receiving a spotify token from a server
                         case "tok":
                             String spotifyToken = raw.substring(4);
-                            setSpotifyToken(spotifyToken);
+                            setSpotifyAccessToken(spotifyToken);
                             break;
                         // Someone has added a new song to the queue
                         case "add":
@@ -259,6 +291,14 @@ public class ConnectionService extends Service {
                             song = new SpotifySong(jsonPayload);
                             jukebox.playSong(song);
                             break;
+                        // Currently playing
+                        case "cur":
+                            stringJson = raw.substring(4);
+                            jsonPayload = new JSONObject(stringJson);
+                            song = new SpotifySong(jsonPayload);
+                            jukebox.playSong(song);
+                            break;
+                        // TODO: pause and resume
                         default:
                             break;
                     }
@@ -268,7 +308,7 @@ public class ConnectionService extends Service {
                 }
                 Log.i(TAG, "Payload received: " + raw);
             } catch (Exception e) {
-                Log.e(TAG, "Invalid length payload.");
+                Log.e(TAG, "Invalid length payload." +  e.toString());
             }
         }
 
@@ -297,7 +337,8 @@ public class ConnectionService extends Service {
                                            @NonNull ConnectionResolution connectionResolution) {
                 Log.i(TAG, "Finished accepting connection from: " + endpointId);
                 connectedClients.add(endpointId);
-                sendSpotifyToken(endpointId, spotifyToken);
+                sendCurrentlyPlaying(endpointId, jukebox.getCurrentlyPlaying());
+                sendSpotifyToken(endpointId, spotifyAccessToken);
                 if (jukebox.getSongQueueLength() > 0) {
                     sendClientSongQueue(endpointId, jukebox.getSongQueue());
                 }
@@ -327,6 +368,7 @@ public class ConnectionService extends Service {
                                            @NonNull ConnectionResolution connectionResolution) {
                 Log.i(TAG, "Finished accepting connection from: " + endpointId);
                 serverEndpoint = endpointId;
+                stopDiscovery();
             }
 
             @Override
@@ -344,17 +386,25 @@ public class ConnectionService extends Service {
                                         @NonNull DiscoveredEndpointInfo discoveredEndpointInfo) {
                 Endpoint endpoint = new Endpoint(endpointId,
                                                  discoveredEndpointInfo.getEndpointName());
+                discoveredHosts.add(endpoint);
                 notifyHostFound(endpoint);
             }
 
             @Override
             public void onEndpointLost(@NonNull String endpointId) {
-                Log.i(TAG, "endpoint lost");
+                Iterator<Endpoint> it = discoveredHosts.iterator();
+                while (it.hasNext()) {
+                    ConnectionService.Endpoint current = it.next();
+                    if (current.getId().equals(endpointId)) {
+                        it.remove();
+                    }
+                }
                 notifyHostLost(endpointId);
             }
         };
 
     public void startAdvertising(final String roomName) {
+        Log.i(TAG, "Advertising");
         connectionsClient
             .startAdvertising(
                 roomName,
@@ -391,8 +441,7 @@ public class ConnectionService extends Service {
                 new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void unusedResult) {
-                    Log.i(TAG, "Discovering...");
-                    // We're discovering!
+                        isDiscovering = true;
                     }
                 })
             .addOnFailureListener(
@@ -406,12 +455,35 @@ public class ConnectionService extends Service {
     }
 
     public void stopDiscovery() {
+        isDiscovering = false;
         connectionsClient.stopDiscovery();
+    }
+
+    public boolean isDiscovering() {
+        return isDiscovering;
     }
 
     public void connectToRoom(String endpointId) {
         // TODO: better naming scheme than hardcoded 'test'
-        connectionsClient.requestConnection("test", endpointId, clientConnectionLifecycleCallback);
+        Log.i(TAG, "trying to connect here" + endpointId);
+        Task<Void> result = connectionsClient.requestConnection("abacacacaca", endpointId, clientConnectionLifecycleCallback);
+        result.addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                Log.e(TAG, e.toString());
+            }
+        });
+    }
+
+    public ArrayList<Endpoint> getDiscoveredHosts() {
+        return this.discoveredHosts;
+    }
+
+    private void sendCurrentlyPlaying(String endpointId, Song song) {
+        if (song != null) {
+            String payload = "cur " + song.toString();
+            sendPayload(endpointId, Payload.fromBytes(payload.getBytes()));
+        }
     }
 
     private void sendSpotifyToken(String endpointId, String spotifyToken) {
@@ -422,15 +494,23 @@ public class ConnectionService extends Service {
     // Nearby network and jukebox song communication
 
     public void enqueueSong(Song song) {
-        if (jukebox.getCurrentlyPlaying() != null) {
-            // TODO: jukebox should probably do notification itself
-            notifySongAdded(song);
-            jukebox.enqueueSong(song);
-            emitSongAdded(connectedClients, song);
+        if (jukebox != null) {
+            if (jukebox.getCurrentlyPlaying() != null || !isHost) {
+                // TODO: jukebox should probably do notification itself
+                Log.i(TAG, "here????");
+                notifySongAdded(song);
+                jukebox.enqueueSong(song);
+                emitSongAdded(connectedClients, song);
+            }
+            else {
+                Log.i(TAG, "we playing?");
+                jukebox.playSong(song);
+            }
         }
-        else {
-            jukebox.playSong(song);
-        }
+    }
+
+    public void skipCurrentSong() {
+        jukebox.playNextSong();
     }
 
     private void sendClientSongQueue(String endpointId, ArrayList<Song> songQueue) {
@@ -440,6 +520,7 @@ public class ConnectionService extends Service {
             // while currently sending the queue to another?
             // Max payload size is (allegedly) 32768 bytes, depending on song queue size
             // we may not have a choice
+            // TODO: we can't send bitmaps
             sendSongAdded(endpointId, songQueue.get(i));
         }
     }
@@ -475,14 +556,27 @@ public class ConnectionService extends Service {
         connectionsClient.sendPayload(endpointIds, payload);
     }
 
-    // Spotify related functions
+    // Spotify API interactions
 
     public void searchSpotifyAPI(String search, String type, Callback callback) {
-        final Request request = new Request.Builder()
-                .url("https://api.spotify.com/v1/search?q=" + search + "&type=" + type)
-                .addHeader("Authorization", "Bearer " + spotifyToken)
-                .addHeader("Accept", "application/json")
-                .build();
+        final Request request =
+                new Request.Builder()
+                           .url("https://api.spotify.com/v1/search?q=" + search + "&type=" + type)
+                           .addHeader("Authorization", "Bearer " + spotifyAccessToken)
+                           .addHeader("Accept", "application/json")
+                           .build();
+        lastRequest = okHttpClient.newCall(request);
+        lastRequest.enqueue(callback);
+    }
+
+    public void getAccessAndRefreshToken(JSONObject authorizationCode, Callback callback) {
+        RequestBody body = RequestBody.create(JSON, authorizationCode.toString());
+        final Request request =
+                new Request.Builder()
+                           .url(API_ENDPOINT + "/spotify/token")
+                           .post(body)
+                           .build();
+
         lastRequest = okHttpClient.newCall(request);
         lastRequest.enqueue(callback);
     }
@@ -530,18 +624,15 @@ public class ConnectionService extends Service {
         }
     }
 
-    protected interface RoomFoundListener {
-        public void onRoomFound(Endpoint endpoint);
-    }
-
-    protected interface RoomLostListener {
-        public void onRoomLost(String endpointId);
+    protected interface RoomListListener {
+        void onRoomLost(String endpointId);
+        void onRoomFound(Endpoint host);
     }
 
     protected interface RoomNetworkListener {
-        public void onSongAdded(Song song);
-        public void onSongRemoved(Song song);
-        public void onSongPlaying(Song song);
-        public void onDisconnect();
+        void onSongAdded(Song song);
+        void onSongRemoved(Song song);
+        void onSongPlaying(Song song);
+        void onDisconnect();
     }
 }

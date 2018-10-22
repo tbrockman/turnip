@@ -1,11 +1,12 @@
-package ca.passtheaux.passtheaux;
+package ca.passtheaux.turnip;
 
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.res.ColorStateList;
-import android.graphics.drawable.Drawable;
+import android.os.IBinder;
 import android.support.design.widget.TextInputEditText;
-import android.support.design.widget.TextInputLayout;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -24,8 +25,17 @@ import com.spotify.sdk.android.authentication.AuthenticationClient;
 import com.spotify.sdk.android.authentication.AuthenticationRequest;
 import com.spotify.sdk.android.authentication.AuthenticationResponse;
 
-import static ca.passtheaux.passtheaux.Main.APP_REDIRECT_URI;
-import static ca.passtheaux.passtheaux.Main.CLIENT_ID;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Response;
+
+import static ca.passtheaux.turnip.Main.APP_REDIRECT_URI;
+import static ca.passtheaux.turnip.Main.CLIENT_ID;
 
 public class Host extends AppCompatActivity {
 
@@ -34,7 +44,8 @@ public class Host extends AppCompatActivity {
     public static final int AUTH_CODE_REQUEST_CODE = 0x11;
 
     private int spotifyExpiresIn;
-    private String spotifyToken;
+    private String spotifyAccessToken;
+    private String spotifyRefreshToken;
     private String spotifyCode;
 
     private TableLayout table;
@@ -42,18 +53,40 @@ public class Host extends AppCompatActivity {
     private Button startButton;
     private TextInputEditText roomName;
 
-    private Context context = this;
+    private Context context;
+
+    private ConnectionService connectionService;
+    private ServiceConnection connection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            connectionService = ((ConnectionService.LocalBinder)service).getService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            Log.i(TAG, "disconnected from service");
+            connectionService = null;
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         context = this;
         setContentView(R.layout.activity_host);
+        bindConnectionService();
         initializeRoomNameField();
         initializeStartButton();
         initializeSwitch();
         initializeTable();
         // TODO: retrieve data in intents from potentially previous created room
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unbindService(connection);
     }
 
     private void initializeStartButton() {
@@ -114,6 +147,17 @@ public class Host extends AppCompatActivity {
         });
     }
 
+    private CompoundButton.OnCheckedChangeListener switchListener =
+        new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    // TODO: only authenticate if we fail to get a new access using stored refresh token
+                    authenticateSpotify();
+                }
+            }
+    };
+
     private void initializeSwitch() {
         spotifySwitch = findViewById(R.id.spotifySwitch);
         ColorStateList colorStateList = new ColorStateList(
@@ -127,22 +171,12 @@ public class Host extends AppCompatActivity {
                 }
         );
         spotifySwitch.setThumbTintList(colorStateList);
-        spotifySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    authenticateSpotify();
-                }
-                else {
-                    spotifyToken = null;
-                }
-            }
-        });
+        spotifySwitch.setOnCheckedChangeListener(switchListener);
     }
 
     private void authenticateSpotify() {
-        final AuthenticationRequest request = getAuthenticationRequest(AuthenticationResponse.Type.TOKEN);
-        AuthenticationClient.openLoginActivity(this, AUTH_TOKEN_REQUEST_CODE, request);
+        final AuthenticationRequest request = getAuthenticationRequest(AuthenticationResponse.Type.CODE);
+        AuthenticationClient.openLoginActivity(this, AUTH_CODE_REQUEST_CODE, request);
     }
 
     private AuthenticationRequest getAuthenticationRequest(AuthenticationResponse.Type type) {
@@ -152,17 +186,50 @@ public class Host extends AppCompatActivity {
                                         .build();
     }
 
+    private Callback accessAndRefreshTokenCallback = new Callback() {
+
+        @Override
+        public void onFailure(Call call, IOException e) {
+
+        }
+
+        @Override
+        public void onResponse(Call call, Response response) throws IOException {
+            // TODO: store access and refresh tokens on device
+            try {
+                final JSONObject jsonResponse = new JSONObject(response.body().string());
+                spotifyAccessToken = jsonResponse.getString("access_token");
+                spotifyRefreshToken = jsonResponse.getString("refresh_token");
+                spotifyExpiresIn = Integer.valueOf(jsonResponse.getString("expires_in"));
+                connectionService.setSpotifyAccessToken(spotifyAccessToken);
+                connectionService.setSpotifyRefreshToken(spotifyRefreshToken);
+                Log.i(TAG, jsonResponse.toString());
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    };
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         final AuthenticationResponse response = AuthenticationClient.getResponse(resultCode, data);
 
         if (AUTH_TOKEN_REQUEST_CODE == requestCode) {
-            spotifyToken = response.getAccessToken();
+            spotifyAccessToken = response.getAccessToken();
             spotifyExpiresIn = response.getExpiresIn();
 
         } else if (AUTH_CODE_REQUEST_CODE == requestCode) {
             spotifyCode = response.getCode();
+            // TODO: wasteful, creating json object and then later we just convert it to a string
+            // again
+            try {
+                JSONObject jsonCode = new JSONObject();
+                jsonCode.put("authorization_code", spotifyCode);
+                connectionService.getAccessAndRefreshToken(jsonCode, accessAndRefreshTokenCallback);
+            } catch (JSONException e) {
+                Log.e(TAG, "Error initializing JSON code object: " + e.toString());
+            }
         }
         else {
             //TODO
@@ -181,9 +248,16 @@ public class Host extends AppCompatActivity {
         roomIntent.putExtra("roomName", roomName.getText().toString());
         roomIntent.putExtra("roomPassword", roomPassword.getText().toString());
         roomIntent.putExtra("isHost", true);
-        roomIntent.putExtra("spotifyToken", spotifyToken);
+        roomIntent.putExtra("spotifyAccessToken", spotifyAccessToken);
         roomIntent.putExtra("spotifyExiresIn", spotifyExpiresIn);
 
         startActivity(roomIntent);
+    }
+
+    private void bindConnectionService() {
+        Intent serviceIntent = new Intent(this, ConnectionService.class);
+        bindService(serviceIntent,
+                connection,
+                Context.BIND_AUTO_CREATE);
     }
 }

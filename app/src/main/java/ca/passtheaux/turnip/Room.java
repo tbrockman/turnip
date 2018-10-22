@@ -1,24 +1,32 @@
-package ca.passtheaux.passtheaux;
+package ca.passtheaux.turnip;
 
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.AppCompatImageView;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 
 public class Room extends AppCompatActivity {
@@ -27,15 +35,45 @@ public class Room extends AppCompatActivity {
     private static final String TAG = Room.class.getSimpleName();
 
     // Context
+
     Context context = this;
 
-    // UI
+    // UI elements
+
     private FloatingActionButton fab;
-    private RecyclerView recyclerView;
     private LinearLayoutManager layoutManager;
+    private LinearLayout noSongsContainer;
+    private LinearLayout currentSongContainer;
+    private RecyclerView recyclerView;
     private SongQueueAdapter adapter;
+    private AppCompatImageView skipButton;
+    private TextView artist;
+    private TextView songName;
+    private TextView songTime;
+    private ImageView albumArt;
+    private ProgressBar timeProgressBar;
+
+    // Currently playing data
+
+    private int songLength; // in seconds
+    private int timeElapsed; // in seconds
+    private Song currentlyPlaying;
+    private final Handler songTimerHandler = new Handler();
+    private final Runnable songTimer =  new Runnable() {
+        @Override
+        public void run() {
+            timeElapsed++;
+            renderCurrentlyPlayingProgress();
+            songTimerHandler.postDelayed(this, 1000);
+        }
+    };
+
+    // Song queue data
+
+    private ArrayList<Song> songQueue;
 
     // Intent extras
+
     private boolean isHost;
     private int expiresIn;
     private String roomName;
@@ -44,6 +82,7 @@ public class Room extends AppCompatActivity {
     private String endpointId;
 
     // Network communication
+
     private ConnectionService connectionService;
     private ServiceConnection connection = new ServiceConnection() {
 
@@ -52,8 +91,10 @@ public class Room extends AppCompatActivity {
             connectionService = ((ConnectionService.LocalBinder)service).getService();
 
             if (connectionService != null) {
+                connectionService.setUpJukebox(isHost);
+
                 if (isHost) {
-                    connectionService.setSpotifyToken(spotifyToken);
+                    connectionService.setSpotifyAccessToken(spotifyToken);
                     connectionService.startAdvertising(roomName);
                 }
                 else {
@@ -65,58 +106,117 @@ public class Room extends AppCompatActivity {
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
+            Log.i(TAG, "disconnected from service");
             connectionService = null;
         }
     };
 
-    // Song queue
-    private Song currentlyPlaying;
-    private ArrayList<Song> songQueue;
-    private ConnectionService.RoomNetworkListener songQueueListener = new ConnectionService.RoomNetworkListener() {
-        @Override
-        public void onSongAdded(Song song) {
-            songQueue.add(song);
-            adapter.notifyItemInserted(songQueue.size() - 1);
-        }
+    // Network listener
 
-        @Override
-        public void onSongRemoved(Song song) {
-            int index = songQueue.indexOf(song);
-            Log.i(TAG, "heard song removed?? " + index);
-            if (index > -1) {
-                songQueue.remove(index);
-                adapter.notifyItemRemoved(index);
+    private ConnectionService.RoomNetworkListener songQueueListener =
+        new ConnectionService.RoomNetworkListener() {
+            @Override
+            public void onSongAdded(Song song) {
+                songQueue.add(song);
+                adapter.notifyItemInserted(songQueue.size() - 1);
+                renderCurrentlyPlaying();
+                renderSongQueueEmpty();
             }
-        }
 
-        @Override
-        public void onSongPlaying(Song song) {
-            currentlyPlaying = song;
-        }
-
-        @Override
-        public void onDisconnect() {
-            AlertDialog.Builder builder = new AlertDialog.Builder(context);
-            builder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    dialog.cancel();
-                    finish();
+            @Override
+            public void onSongRemoved(Song song) {
+                int index = songQueue.indexOf(song);
+                if (index > -1) {
+                    songQueue.remove(index);
+                    adapter.notifyItemRemoved(index);
                 }
-            });
-            builder.setCancelable(false);
-            builder.setTitle("Disconnected");
-            builder.setMessage("Lost connection to host.");
-            builder.create();
-            builder.show();
-        }
+                renderCurrentlyPlaying();
+                renderSongQueueEmpty();
+            }
+
+            @Override
+            public void onSongPlaying(Song song) {
+                currentlyPlaying = song;
+                songTimerHandler.removeCallbacks(songTimer);
+                if (song.has("timeElapsed")) {
+                    try {
+                        timeElapsed = Integer.valueOf(song.getString("timeElapsed"));
+                    } catch(Exception e) {
+                        timeElapsed = 0;
+                    }
+                }
+                songLength = Integer.parseInt(song.getString("duration_ms")) / 1000;
+                songTimerHandler.postDelayed(songTimer, 1000);
+                renderCurrentlyPlaying();
+                renderSongQueueEmpty();
+            }
+
+            //TODO: implement network method for pause/resume song
+
+            @Override
+            public void onDisconnect() {
+                AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                builder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.cancel();
+                        finish();
+                    }
+                });
+                builder.setCancelable(false);
+                builder.setTitle("Disconnected");
+                builder.setMessage("Lost connection to host.");
+                builder.create();
+                builder.show();
+            }
     };
+
+    // Currently playing
+
+    private void renderCurrentlyPlaying() {
+        if (currentlyPlaying != null) {
+            if (songQueue.size() == 0) {
+                skipButton.setVisibility(View.GONE);
+            }
+            else {
+                skipButton.setVisibility(View.VISIBLE);
+            }
+            artist.setText(TextUtils.join(", ", currentlyPlaying.getArtists()));
+            albumArt.setImageBitmap(currentlyPlaying.getAlbumArt());
+            songName.setText(currentlyPlaying.getString("name"));
+            currentSongContainer.setVisibility(View.VISIBLE);
+            renderCurrentlyPlayingProgress();
+        }
+        else {
+            currentSongContainer.setVisibility(View.GONE);
+        }
+    }
+
+    private void renderCurrentlyPlayingProgress() {
+        songTime.setText(secondsToString(timeElapsed));
+        timeProgressBar.setProgress((int) Math.ceil(timeElapsed * 100 / songLength));
+    }
+
+    private void renderSongQueueEmpty() {
+        if (currentlyPlaying == null) {
+            noSongsContainer.setVisibility(View.VISIBLE);
+        }
+        else {
+            noSongsContainer.setVisibility(View.GONE);
+        }
+    }
+
+    public String secondsToString(int seconds) {
+        return String.format(Locale.US, "%01d:%02d", seconds / 60, seconds % 60);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_room);
+
+        bindConnectionService();
 
         Intent intent = getIntent();
         isHost = intent.getBooleanExtra("isHost", false);
@@ -128,23 +228,44 @@ public class Room extends AppCompatActivity {
 
         setTitle(roomName);
 
-        recyclerView = (RecyclerView) findViewById(R.id.roomRecyclerView);
+        recyclerView = findViewById(R.id.roomRecyclerView);
+        currentSongContainer = findViewById(R.id.currentSongContainer);
+        noSongsContainer = findViewById(R.id.noSongsContainer);
         fab =  findViewById(R.id.fab);
+        artist = findViewById(R.id.artist);
+        albumArt = findViewById(R.id.albumArt);
+        songName = findViewById(R.id.songName);
+        songTime = findViewById(R.id.songTime);
+        skipButton = findViewById(R.id.skipButton);
+        timeProgressBar = findViewById(R.id.timeElapsed);
+
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startAddActivity();
+                startSongAddActivity();
+            }
+        });
+
+        skipButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (isHost) {
+                    connectionService.skipCurrentSong();
+                }
+                else {
+                    // TODO: vote to skip
+                }
             }
         });
 
         songQueue = new ArrayList();
         layoutManager = new LinearLayoutManager(this);
         adapter = new SongQueueAdapter(songQueue);
-
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(adapter);
 
-        bindConnectionService();
+        renderCurrentlyPlaying();
+        renderSongQueueEmpty();
     }
 
     @Override
@@ -154,6 +275,7 @@ public class Room extends AppCompatActivity {
             connectionService.stopAdvertising();
         }
         Log.i(TAG, "calling Room on destroy now");
+        songTimerHandler.removeCallbacks(songTimer);
         connectionService.unsubscribeRoomNetwork();
         connectionService.destroyRoom();
         unbindService(connection);
@@ -221,15 +343,13 @@ public class Room extends AppCompatActivity {
         return i;
     }
 
-    private void startAddActivity() {
+    private void startSongAddActivity() {
         Intent queueSong = new Intent(this, SongSearch.class);
         startActivityForResult(queueSong, ADD_SONG_REQUEST);
     }
 
     private void bindConnectionService() {
         Intent serviceIntent = new Intent(this, ConnectionService.class);
-        serviceIntent.putExtra("isHost", isHost);
-        serviceIntent.putExtra("inRoom", true);
         bindService(serviceIntent,
                     connection,
                     Context.BIND_AUTO_CREATE);

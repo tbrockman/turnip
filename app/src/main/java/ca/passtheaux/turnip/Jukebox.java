@@ -1,6 +1,4 @@
-package ca.passtheaux.passtheaux;
-
-import android.util.Log;
+package ca.passtheaux.turnip;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -34,6 +32,8 @@ public class Jukebox {
         jukeboxListener.onSongPlaying(song);
     }
 
+    public void playNextSong() {}
+
     public void turnOff() {
         songQueue.clear();
         jukeboxListener = null;
@@ -43,8 +43,18 @@ public class Jukebox {
         return this.currentlyPlaying;
     }
 
+    public void setTimeElapsed(int timeElapsed) {
+        if (this.currentlyPlaying != null) {
+            this.currentlyPlaying.setTimeElapsed(timeElapsed);
+        }
+    }
+
     public Song getNextSong() {
-        return this.songQueue.get(0);
+        Song song = null;
+        if (this.songQueue.size() > 0) {
+            song = this.songQueue.get(0);
+        }
+        return song;
     }
 
     public ArrayList<Song> getSongQueue() { return this.songQueue; }

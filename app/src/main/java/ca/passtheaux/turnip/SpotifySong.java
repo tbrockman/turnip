@@ -1,4 +1,4 @@
-package ca.passtheaux.passtheaux;
+package ca.passtheaux.turnip;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -28,6 +28,10 @@ class SpotifySong extends Song {
         }
     }
 
+    public boolean has(String key) {
+        return jsonSong.has(key);
+    }
+
     public void setString(String key, String value) {
         try {
             jsonSong.put(key, value);
@@ -45,6 +49,15 @@ class SpotifySong extends Song {
             jsonSong.put("bitmap", encodedImage);
         } catch (JSONException e) {
             Log.e(TAG, e.toString());
+        }
+    }
+
+    @Override
+    void setTimeElapsed(int timeElapsed) {
+        try {
+            jsonSong.put("timeElapsed", String.valueOf(timeElapsed));
+        } catch (JSONException e) {
+            Log.e(TAG, "Error setting time elapsed on song: " + e.toString());
         }
     }
 
@@ -73,7 +86,7 @@ class SpotifySong extends Song {
         }
 
         return this.albumArt;
-    };
+    }
 
     public JSONArray getArray(String key) {
         try {

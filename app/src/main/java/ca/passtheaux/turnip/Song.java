@@ -1,4 +1,4 @@
-package ca.passtheaux.passtheaux;
+package ca.passtheaux.turnip;
 
 import android.graphics.Bitmap;
 
@@ -6,11 +6,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 
 // Wrapper for our JSON songs
-public abstract class Song implements Serializable {
+public abstract class Song {
     JSONObject jsonSong;
     Bitmap albumArt;
 
@@ -24,11 +23,13 @@ public abstract class Song implements Serializable {
     }
 
     abstract JSONObject get(String key);
+    abstract String getString(String key);
+    abstract boolean has(String key);
     abstract JSONArray getArray(String key);
     abstract boolean hasAlbumArt();
     abstract void setAlbumArt(Bitmap bitmap);
+    abstract void setTimeElapsed(int timeElapsed);
     abstract Bitmap getAlbumArt();
     abstract ArrayList<String> getArtists();
-    abstract String getString(String key);
     abstract String getSongType();
 }
