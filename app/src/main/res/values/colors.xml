@@ -4,6 +4,7 @@
     <color name="colorPrimaryLight">#b388ff</color>
     <color name="colorPrimaryDark">#01579b</color>
     <color name="colorAccent">#D81B60</color>
+    <color name="turnipWhite">#ffffff</color>
     <color name="colorBackground">#191919</color>
     <color name="colorButtonBackgroundPrimary">#673ab7</color>
     <color name="colorButtonTextPrimary">#efebe9</color>

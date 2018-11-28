@@ -1,4 +1,4 @@
-package ca.passtheaux.turnip;
+package ca.turnip.turnip;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;

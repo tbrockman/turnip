@@ -1,4 +1,4 @@
-package ca.passtheaux.turnip;
+package ca.turnip.turnip;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -14,34 +14,34 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class RoomList extends AppCompatActivity {
+public class RoomListActivity extends AppCompatActivity {
 
-    private static final String TAG = RoomList.class.getSimpleName();
+    private static final String TAG = RoomListActivity.class.getSimpleName();
 
-    private ConnectionService connectionService;
+    private BackgroundService backgroundService;
 
     // RecyclerView
 
     private RecyclerView recyclerView;
     private RecyclerView.Adapter adapter;
     private RecyclerView.LayoutManager layoutManager;
-    private ArrayList<ConnectionService.Endpoint> rooms = new ArrayList<>();;
+    private ArrayList<BackgroundService.Endpoint> rooms = new ArrayList<>();;
 
-    // Room list listener
-    private ConnectionService.RoomListListener roomListListener =
-            new ConnectionService.RoomListListener() {
+    // RoomActivity list listener
+    private RoomListListener roomListListener =
+            new RoomListListener() {
         @Override
-        public void onRoomFound(ConnectionService.Endpoint host) {
+        public void onRoomFound(BackgroundService.Endpoint host) {
             rooms.add(host);
             adapter.notifyItemInserted(rooms.size() - 1);
         }
 
         @Override
         public void onRoomLost(String endpointId) {
-            Iterator<ConnectionService.Endpoint> it = rooms.iterator();
+            Iterator<BackgroundService.Endpoint> it = rooms.iterator();
             Log.i(TAG, "room lost: " + endpointId);
             while (it.hasNext()) {
-                ConnectionService.Endpoint current = it.next();
+                BackgroundService.Endpoint current = it.next();
                 Log.i(TAG, current.toString() + " " + endpointId);
 
                 if (current.getId().equals(endpointId)) {
@@ -56,21 +56,21 @@ public class RoomList extends AppCompatActivity {
 
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            connectionService = ((ConnectionService.LocalBinder)service).getService();
-            connectionService.subscribeRoomListListener(roomListListener);
-            connectionService.startDiscovery();
+            backgroundService = ((BackgroundService.LocalBinder)service).getService();
+            backgroundService.subscribeRoomListListener(roomListListener);
+            backgroundService.startDiscovery();
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            connectionService = null;
+            backgroundService = null;
         }
     };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.i(TAG, "Room list on created");
+        Log.i(TAG, "RoomActivity list on created");
         setContentView(R.layout.activity_room_list);
         bindConnectionService();
 
@@ -85,14 +85,14 @@ public class RoomList extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        Log.i(TAG, "Room list on start.");
-        if (connectionService != null) {
-            rooms = connectionService.getDiscoveredHosts();
+        Log.i(TAG, "RoomActivity list on start.");
+        if (backgroundService != null) {
+            rooms = backgroundService.getDiscoveredHosts();
             Log.i(TAG, "not null" + rooms.toString());
             adapter.notifyDataSetChanged();
-            if (!connectionService.isDiscovering()) {
+            if (!backgroundService.isDiscovering()) {
                 Log.i(TAG, "starting discovery again");
-                connectionService.startDiscovery();
+                backgroundService.startDiscovery();
             }
         }
     }
@@ -109,7 +109,7 @@ public class RoomList extends AppCompatActivity {
     }
 
     private void bindConnectionService() {
-        Intent serviceIntent = new Intent(this, ConnectionService.class);
+        Intent serviceIntent = new Intent(this, BackgroundService.class);
         bindService(serviceIntent,
                     connection,
                     Context.BIND_AUTO_CREATE);

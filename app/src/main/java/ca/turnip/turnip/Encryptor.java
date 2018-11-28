@@ -1,4 +1,4 @@
-package ca.passtheaux.turnip;
+package ca.turnip.turnip;
 
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;

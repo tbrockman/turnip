@@ -1,4 +1,4 @@
-package ca.passtheaux.turnip;
+package ca.turnip.turnip;
 
 import android.content.Context;
 import android.util.Log;
@@ -12,8 +12,8 @@ import com.spotify.protocol.client.Subscription;
 import com.spotify.protocol.types.Empty;
 import com.spotify.protocol.types.PlayerState;
 
-import static ca.passtheaux.turnip.Main.APP_REDIRECT_URI;
-import static ca.passtheaux.turnip.Main.CLIENT_ID;
+import static ca.turnip.turnip.MainActivity.APP_REDIRECT_URI;
+import static ca.turnip.turnip.MainActivity.CLIENT_ID;
 
 class ServerJukebox extends Jukebox {
 

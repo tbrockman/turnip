@@ -1,4 +1,4 @@
-package ca.passtheaux.turnip;
+package ca.turnip.turnip;
 
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -17,8 +17,8 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 
-import static ca.passtheaux.turnip.Encryptor.ANDROID_KEY_STORE;
-import static ca.passtheaux.turnip.Encryptor.TRANSFORMATION;
+import static ca.turnip.turnip.Encryptor.ANDROID_KEY_STORE;
+import static ca.turnip.turnip.Encryptor.TRANSFORMATION;
 
 // Courtesy of u/JosiasSena
 // https://gist.github.com/JosiasSena/3bf4ca59777f7dedcaf41a495d96d984

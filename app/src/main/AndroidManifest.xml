@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="ca.passtheaux.turnip">
+    package="ca.turnip.turnip">
 
     <!-- Required for Nearby Connections -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
@@ -17,12 +17,13 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <service
-            android:name="ca.passtheaux.turnip.ConnectionService"
+            android:name=".BackgroundService"
             android:enabled="true"
             android:exported="true"
             android:stopWithTask="true" />
+
         <activity
-            android:name="ca.passtheaux.turnip.Main"
+            android:name=".MainActivity"
             android:theme="@style/Empty">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -31,23 +32,25 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="ca.passtheaux.turnip.Host"
+            android:name=".HostActivity"
             android:label="@string/title_activity_host"
-            android:parentActivityName="ca.passtheaux.turnip.Main"
+            android:parentActivityName=".MainActivity"
             android:theme="@style/AppActionBarActivityTheme" />
         <activity
-            android:name="ca.passtheaux.turnip.Room"
+            android:name=".RoomActivity"
             android:label="Room"
-            android:parentActivityName="ca.passtheaux.turnip.Main"
+            android:parentActivityName=".MainActivity"
             android:theme="@style/AppActionBarActivityTheme" />
         <activity
-            android:name="ca.passtheaux.turnip.RoomList"
+            android:name=".RoomListActivity"
             android:label="Rooms"
-            android:parentActivityName="ca.passtheaux.turnip.Main"
+            android:parentActivityName=".MainActivity"
             android:theme="@style/AppActionBarActivityTheme" />
         <activity
-            android:name="ca.passtheaux.turnip.SongSearch"
-            android:theme="@style/Empty"/>
+            android:name=".SongSearchActivity"
+            android:theme="@style/AppActionBarActivityTheme"
+            android:parentActivityName=".RoomActivity"/>
+        <activity android:name=".SpotifyAuthenticatedActivity"></activity>
     </application>
 
 </manifest>

@@ -1,4 +1,4 @@
-package ca.passtheaux.turnip;
+package ca.turnip.turnip;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -9,7 +9,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.AppCompatImageView;
 import android.support.v7.widget.LinearLayoutManager;
@@ -29,10 +28,10 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 
-public class Room extends AppCompatActivity {
+public class RoomActivity extends SpotifyAuthenticatedActivity {
 
     static final int ADD_SONG_REQUEST = 1;
-    private static final String TAG = Room.class.getSimpleName();
+    private static final String TAG = RoomActivity.class.getSimpleName();
 
     // Context
 
@@ -74,47 +73,16 @@ public class Room extends AppCompatActivity {
 
     // Intent extras
 
-    private boolean isHost;
-    private int expiresIn;
     private String roomName;
     private String roomPassword;
-    private String spotifyToken;
+    private Boolean isHost;
+
     private String endpointId;
-
-    // Network communication
-
-    private ConnectionService connectionService;
-    private ServiceConnection connection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            connectionService = ((ConnectionService.LocalBinder)service).getService();
-
-            if (connectionService != null) {
-                connectionService.setUpJukebox(isHost);
-
-                if (isHost) {
-                    connectionService.setSpotifyAccessToken(spotifyToken);
-                    connectionService.startAdvertising(roomName);
-                }
-                else {
-                    connectionService.connectToRoom(endpointId);
-                }
-                connectionService.subscribeRoomNetwork(songQueueListener);
-            }
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            Log.i(TAG, "disconnected from service");
-            connectionService = null;
-        }
-    };
 
     // Network listener
 
-    private ConnectionService.RoomNetworkListener songQueueListener =
-        new ConnectionService.RoomNetworkListener() {
+    private RoomJukeboxListener roomJukeboxListener =
+        new RoomJukeboxListener() {
             @Override
             public void onSongAdded(Song song) {
                 songQueue.add(song);
@@ -149,6 +117,22 @@ public class Room extends AppCompatActivity {
                 songTimerHandler.postDelayed(songTimer, 1000);
                 renderCurrentlyPlaying();
                 renderSongQueueEmpty();
+            }
+
+            @Override
+            public void onSongPaused(int timeElapsed) {
+                timeElapsed = timeElapsed;
+            }
+
+            @Override
+            public void onSongResumed(int timeElapsed) {
+                timeElapsed = timeElapsed;
+            }
+
+            @Override
+            public void onSongTick() {
+                timeElapsed++;
+                renderCurrentlyPlayingProgress();
             }
 
             //TODO: implement network method for pause/resume song
@@ -216,28 +200,22 @@ public class Room extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_room);
 
-        bindConnectionService();
-
+        bindRoomActivityConnectionService();
+        Log.i(TAG, "creating room activity");
         Intent intent = getIntent();
         isHost = intent.getBooleanExtra("isHost", false);
         roomName = intent.getStringExtra("roomName");
         roomPassword = intent.getStringExtra("roomPassword");
         endpointId = intent.getStringExtra("endpointId");
-        spotifyToken = intent.getStringExtra("spotifyToken");
-        expiresIn = intent.getIntExtra("expiresIn", 60 * 60 * 2);
+        spotifyEnabled = intent.getBooleanExtra("spotifyEnabled", false);
+
+        if (spotifyEnabled && isHost) {
+            initializeSpotifyAuthentication(intent);
+        }
 
         setTitle(roomName);
 
-        recyclerView = findViewById(R.id.roomRecyclerView);
-        currentSongContainer = findViewById(R.id.currentSongContainer);
-        noSongsContainer = findViewById(R.id.noSongsContainer);
-        fab =  findViewById(R.id.fab);
-        artist = findViewById(R.id.artist);
-        albumArt = findViewById(R.id.albumArt);
-        songName = findViewById(R.id.songName);
-        songTime = findViewById(R.id.songTime);
-        skipButton = findViewById(R.id.skipButton);
-        timeProgressBar = findViewById(R.id.timeElapsed);
+        assignViewElementVariables();
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -250,7 +228,7 @@ public class Room extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (isHost) {
-                    connectionService.skipCurrentSong();
+                    backgroundService.skipCurrentSong();
                 }
                 else {
                     // TODO: vote to skip
@@ -268,16 +246,67 @@ public class Room extends AppCompatActivity {
         renderSongQueueEmpty();
     }
 
+    private void initializeSpotifyAuthentication(Intent intent) {
+        spotifyAccessToken = intent.getStringExtra("spotifyAccessToken");
+        spotifyRefreshToken = intent.getStringExtra("spotifyRefreshToken");
+        spotifyExpiresIn = intent.getIntExtra("spotifyExpiresIn", 60 * 60 * 2);
+        spotifyTimerHandler.postDelayed(spotifyRefreshTokenTimer, 1000);
+    }
+
+    private void bindRoomActivityConnectionService() {
+        connection = new ServiceConnection() {
+
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {
+                backgroundService = ((BackgroundService.LocalBinder)service).getService();
+
+                if (backgroundService != null) {
+                    backgroundService.setUpJukebox(isHost);
+
+                    if (isHost) {
+//                        backgroundService.setSpotifyAccessToken(spotifyAccessToken);
+//                        backgroundService.setSpotifyRefreshToken(spotifyRefreshToken);
+                        backgroundService.startAdvertising(roomName);
+                    }
+                    else {
+                        backgroundService.connectToRoom(endpointId);
+                    }
+                    backgroundService.subscribeRoomJukeboxListener(roomJukeboxListener);
+                }
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+                Log.i(TAG, "disconnected from service");
+                backgroundService = null;
+            }
+        };
+        bindConnectionService(this);
+    }
+
+    private void assignViewElementVariables() {
+        recyclerView = findViewById(R.id.roomRecyclerView);
+        currentSongContainer = findViewById(R.id.currentSongContainer);
+        noSongsContainer = findViewById(R.id.noSongsContainer);
+        fab =  findViewById(R.id.fab);
+        artist = findViewById(R.id.artist);
+        albumArt = findViewById(R.id.albumArt);
+        songName = findViewById(R.id.songName);
+        songTime = findViewById(R.id.songTime);
+        skipButton = findViewById(R.id.skipButton);
+        timeProgressBar = findViewById(R.id.timeElapsed);
+    }
+
     @Override
     public void onDestroy() {
         if (this.isHost) {
             Log.i(TAG, "Calling onDestroy here");
-            connectionService.stopAdvertising();
+            backgroundService.stopAdvertising();
         }
-        Log.i(TAG, "calling Room on destroy now");
+        Log.i(TAG, "calling RoomActivity on destroy now");
         songTimerHandler.removeCallbacks(songTimer);
-        connectionService.unsubscribeRoomNetwork();
-        connectionService.destroyRoom();
+        backgroundService.unsubscribeRoomJukeboxListener();
+        backgroundService.destroyRoom();
         unbindService(connection);
         super.onDestroy();
     }
@@ -301,11 +330,11 @@ public class Room extends AppCompatActivity {
                         if (song != null) {
                             if (isHost) {
                                 // Add to local song queue and emit to all clients
-                                connectionService.enqueueSong(song);
+                                backgroundService.enqueueSong(song);
                             }
                             else {
                                 // Send to server
-                                connectionService.addSong(song);
+                                backgroundService.addSong(song);
                             }
                         }
                     }
@@ -328,15 +357,15 @@ public class Room extends AppCompatActivity {
         boolean isHost = intent.getBooleanExtra("isHost", false);
 
         if (isHost) {
-            i = new Intent(this, Host.class);
+            i = new Intent(this, HostActivity.class);
             i.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             i.putExtra("isHost", isHost);
             i.putExtra("roomName", roomName);
             i.putExtra("roomPassword", roomPassword);
-            i.putExtra("spotifyToken", spotifyToken);
-            i.putExtra("expiresIn", expiresIn);
+            i.putExtra("spotifyAccessToken", spotifyAccessToken);
+            i.putExtra("spotifyExpiresIn", spotifyExpiresIn);
         } else {
-            i = new Intent(this, RoomList.class);
+            i = new Intent(this, RoomListActivity.class);
             i.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         }
 
@@ -344,14 +373,7 @@ public class Room extends AppCompatActivity {
     }
 
     private void startSongAddActivity() {
-        Intent queueSong = new Intent(this, SongSearch.class);
+        Intent queueSong = new Intent(this, SongSearchActivity.class);
         startActivityForResult(queueSong, ADD_SONG_REQUEST);
-    }
-
-    private void bindConnectionService() {
-        Intent serviceIntent = new Intent(this, ConnectionService.class);
-        bindService(serviceIntent,
-                    connection,
-                    Context.BIND_AUTO_CREATE);
     }
 }

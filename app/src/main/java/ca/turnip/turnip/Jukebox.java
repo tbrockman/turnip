@@ -1,4 +1,4 @@
-package ca.passtheaux.turnip;
+package ca.turnip.turnip;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -6,12 +6,26 @@ import java.util.Iterator;
 public class Jukebox {
     // Songs
     private final ArrayList<Song> songQueue;
+
     private JukeboxListener jukeboxListener;
+
     private Song currentlyPlaying;
 
     public Jukebox(JukeboxListener jukeboxListener) {
         this.songQueue = new ArrayList<>();
         this.jukeboxListener = jukeboxListener;
+    }
+
+    public Song getCurrentlyPlaying() {
+        return this.currentlyPlaying;
+    }
+
+    public Song getNextSong() {
+        Song song = null;
+        if (this.songQueue.size() > 0) {
+            song = this.songQueue.get(0);
+        }
+        return song;
     }
 
     public void enqueueSong(Song song) {
@@ -32,6 +46,12 @@ public class Jukebox {
         jukeboxListener.onSongPlaying(song);
     }
 
+    public ArrayList<Song> getSongQueue() { return this.songQueue; }
+
+    public int getSongQueueLength() {
+        return this.songQueue.size();
+    }
+
     public void playNextSong() {}
 
     public void turnOff() {
@@ -39,32 +59,9 @@ public class Jukebox {
         jukeboxListener = null;
     }
 
-    public Song getCurrentlyPlaying() {
-        return this.currentlyPlaying;
-    }
-
     public void setTimeElapsed(int timeElapsed) {
         if (this.currentlyPlaying != null) {
             this.currentlyPlaying.setTimeElapsed(timeElapsed);
         }
-    }
-
-    public Song getNextSong() {
-        Song song = null;
-        if (this.songQueue.size() > 0) {
-            song = this.songQueue.get(0);
-        }
-        return song;
-    }
-
-    public ArrayList<Song> getSongQueue() { return this.songQueue; }
-
-    public int getSongQueueLength() {
-        return this.songQueue.size();
-    }
-
-    public interface JukeboxListener {
-        public void onSongPlaying(Song song);
-        public void onSongRemoved(Song song);
     }
 }

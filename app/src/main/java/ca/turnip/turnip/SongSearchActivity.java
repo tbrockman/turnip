@@ -1,4 +1,4 @@
-package ca.passtheaux.turnip;
+package ca.turnip.turnip;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -11,6 +11,9 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 
 import com.mancj.materialsearchbar.MaterialSearchBar;
 
@@ -27,13 +30,12 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
-public class SongSearch extends AppCompatActivity {
+public class SongSearchActivity extends AppCompatActivity {
 
-    private static final String TAG = SongSearch.class.getSimpleName();
+    private static final String TAG = SongSearchActivity.class.getSimpleName();
 
     // UI
 
-    private MaterialSearchBar searchBar;
     private LayoutInflater inflater;
     private SongSuggestionsAdapter customSuggestionsAdapter;
 
@@ -49,52 +51,71 @@ public class SongSearch extends AppCompatActivity {
 
     // Network
 
-    private ConnectionService connectionService;
+    private BackgroundService backgroundService;
     private ServiceConnection connection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            connectionService = ((ConnectionService.LocalBinder)service).getService();
+            backgroundService = ((BackgroundService.LocalBinder)service).getService();
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            connectionService = null;
+            backgroundService = null;
         }
     };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_queue_song);
+        setContentView(R.layout.activity_song_search);
+
         bindConnectionService();
 
         songs = new ArrayList<>();
         searchTimer = new Timer();
-        searchBar = (MaterialSearchBar) findViewById(R.id.searchBar);
-        searchBar.addTextChangeListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+//        searchBar = (MaterialSearchBar) findViewById(R.id.searchBar);
+//        searchBar.addTextChangeListener(new TextWatcher() {
+//            @Override
+//            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+//
+//            @Override
+//            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+//                if (searchTask != null) {
+//                    searchTask.cancel();
+//
+//                }
+//                searchTask = new TimerTask() {
+//                    @Override
+//                    public void run() {
+//                        backgroundService.searchSpotifyAPI(searchBar.getText(),
+//                                                          "track",
+//                                                           spotifySearchCallback);
+//                    }
+//                };
+//                searchTimer.schedule(searchTask, searchDelay);
+//            }
+//
+//            @Override
+//            public void afterTextChanged(Editable editable) {}
+//        });
+    }
 
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                if (searchTask != null) {
-                    searchTask.cancel();
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.options_menu, menu);
+        return true;
+    }
 
-                }
-                searchTask = new TimerTask() {
-                    @Override
-                    public void run() {
-                        connectionService.searchSpotifyAPI(searchBar.getText(),
-                                                          "track",
-                                                           spotifySearchCallback);
-                    }
-                };
-                searchTimer.schedule(searchTask, searchDelay);
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {}
-        });
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            // Respond to the action bar's Up/Home button
+            case android.R.id.home:
+                finish();
+                return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -141,11 +162,11 @@ public class SongSearch extends AppCompatActivity {
                             songs.add(song);
                         }
                         inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
-                        customSuggestionsAdapter = new SongSuggestionsAdapter(inflater,
-                                                                              songClickedCallback);
-                        customSuggestionsAdapter.setSuggestions(songs);
-                        searchBar.setCustomSuggestionAdapter(customSuggestionsAdapter);
-                        searchBar.showSuggestionsList();
+//                        customSuggestionsAdapter = new SongSuggestionsAdapter(inflater,
+//                                                                              songClickedCallback);
+//                        customSuggestionsAdapter.setSuggestions(songs);
+//                        searchBar.setCustomSuggestionAdapter(customSuggestionsAdapter);
+//                        searchBar.showSuggestionsList();
                     } catch (JSONException e) {
                         Log.e(TAG, "Error converting search response body to JSON.");
                     } catch (IOException e) {
@@ -157,7 +178,7 @@ public class SongSearch extends AppCompatActivity {
     };
 
     private void bindConnectionService() {
-        Intent serviceIntent = new Intent(this, ConnectionService.class);
+        Intent serviceIntent = new Intent(this, BackgroundService.class);
         bindService(serviceIntent,
                     connection,
                     Context.BIND_AUTO_CREATE);

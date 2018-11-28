@@ -1,11 +1,13 @@
-package ca.passtheaux.turnip;
+package ca.turnip.turnip;
 
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Binder;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
+import android.util.Base64;
 import android.util.Log;
 
 import com.google.android.gms.nearby.Nearby;
@@ -29,13 +31,21 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
+import java.security.NoSuchProviderException;
+import java.security.SignatureException;
+import java.security.UnrecoverableEntryException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -44,14 +54,13 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 
-import static ca.passtheaux.turnip.Main.API_ENDPOINT;
+import static ca.turnip.turnip.MainActivity.API_ENDPOINT;
 
 
-public class ConnectionService extends Service {
+public class BackgroundService extends Service {
 
-    private static final String TAG = ConnectionService.class.getSimpleName();
-    public static final MediaType JSON
-            = MediaType.parse("application/json; charset=utf-8");
+    private static final String TAG = BackgroundService.class.getSimpleName();
+    public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
     // Binder, context, and context variables
 
@@ -67,8 +76,8 @@ public class ConnectionService extends Service {
     private final ArrayList<Endpoint> discoveredHosts = new ArrayList();
     private final OkHttpClient okHttpClient = new OkHttpClient();
     private String serverEndpoint;
-    private ConnectionsClient connectionsClient;
     private Call lastRequest;
+    private ConnectionsClient connectionsClient;
 
     // Token storage and encryption
 
@@ -80,13 +89,13 @@ public class ConnectionService extends Service {
     // Potential listeners
 
     private RoomListListener roomListListener;
-    private RoomNetworkListener roomNetworkListener;
+    private RoomJukeboxListener roomJukeboxListener;
 
     // Jukebox
 
     private Jukebox jukebox;
 
-    private Jukebox.JukeboxListener jukeboxListener = new Jukebox.JukeboxListener() {
+    private JukeboxListener jukeboxListener = new JukeboxListener() {
         @Override
         public void onSongPlaying(Song song) {
             emitSongPlaying(connectedClients, song);
@@ -97,11 +106,24 @@ public class ConnectionService extends Service {
         public void onSongRemoved(Song song) {
             notifySongRemoved(song);
         }
+
+        @Override
+        public void onSongPaused(int timeElapsed) {
+            notifySongPaused(timeElapsed);
+        }
+
+        @Override
+        public void onSongResumed(int timeElapsed) {
+            notifySongResumed(timeElapsed);
+        }
+
+        @Override
+        public void onSongTick() { notifySongTicked(); }
     };
 
     public class LocalBinder extends Binder {
-        ConnectionService getService() {
-            return ConnectionService.this;
+        BackgroundService getService() {
+            return BackgroundService.this;
         }
     }
 
@@ -112,14 +134,8 @@ public class ConnectionService extends Service {
         encryptor = new Encryptor();
         try {
             decryptor = new Decryptor();
-        } catch (CertificateException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (KeyStoreException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            Log.e(TAG, "Error instantiating decryptor: " + e.toString());
         }
         return binder;
     }
@@ -175,31 +191,49 @@ public class ConnectionService extends Service {
         }
     }
 
-    public void subscribeRoomNetwork(RoomNetworkListener listener) { roomNetworkListener = listener; }
+    public void subscribeRoomJukeboxListener(RoomJukeboxListener listener) { roomJukeboxListener = listener; }
 
-    public void unsubscribeRoomNetwork() { roomNetworkListener = null; }
+    public void unsubscribeRoomJukeboxListener() { roomJukeboxListener = null; }
 
     private void notifySongAdded(Song song) {
-        if (roomNetworkListener != null) {
-            roomNetworkListener.onSongAdded(song);
+        if (roomJukeboxListener != null) {
+            roomJukeboxListener.onSongAdded(song);
         }
     }
 
     private void notifySongRemoved(Song song) {
-        if (roomNetworkListener != null) {
-            roomNetworkListener.onSongRemoved(song);
+        if (roomJukeboxListener != null) {
+            roomJukeboxListener.onSongRemoved(song);
         }
     }
 
     private void notifySongPlaying(Song song) {
-        if (roomNetworkListener != null) {
-            roomNetworkListener.onSongPlaying(song);
+        if (roomJukeboxListener != null) {
+            roomJukeboxListener.onSongPlaying(song);
         }
     }
 
     private void notifyDisconnected() {
-        if (roomNetworkListener != null) {
-            roomNetworkListener.onDisconnect();
+        if (roomJukeboxListener != null) {
+            roomJukeboxListener.onDisconnect();
+        }
+    }
+
+    private void notifySongPaused(int timeElapsed) {
+        if (roomJukeboxListener != null) {
+            roomJukeboxListener.onSongPaused(timeElapsed);
+        }
+    }
+
+    private void notifySongResumed(int timeElapsed) {
+        if (roomJukeboxListener != null) {
+            roomJukeboxListener.onSongResumed(timeElapsed);
+        }
+    }
+
+    private void notifySongTicked() {
+        if (roomJukeboxListener != null) {
+            roomJukeboxListener.onSongTick();
         }
     }
 
@@ -215,6 +249,56 @@ public class ConnectionService extends Service {
 
     public String getSpotifyRefreshToken() {
         return spotifyRefreshToken;
+    }
+
+    public boolean existsStoredSpotifyRefreshToken() {
+        SharedPreferences sharedPref =
+                context.getSharedPreferences(getString(R.string.preference_file_key),
+                        Context.MODE_PRIVATE);
+        return sharedPref.contains(getString(R.string.shared_preference_token_key));
+    }
+
+    public String getStoredSpotifyRefreshToken() throws IOException, BadPaddingException,
+            NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException,
+            InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchProviderException,
+            KeyStoreException, IllegalBlockSizeException {
+
+        String token = null;
+
+        if (existsStoredSpotifyRefreshToken()) {
+            SharedPreferences sharedPref =
+                    context.getSharedPreferences(getString(R.string.preference_file_key),
+                            Context.MODE_PRIVATE);
+            String base64Token = sharedPref.getString(getString(R.string.shared_preference_token_key),
+                    "");
+            String base64IV = sharedPref.getString(getString(R.string.shared_preferences_iv),
+                    "");
+            byte[] encrypted = Base64.decode(base64Token, Base64.NO_WRAP);
+            byte[] iv = Base64.decode(base64IV, Base64.NO_WRAP);
+            token = decryptor.decryptData(getString(R.string.token_store_key), encrypted, iv);
+        }
+
+        return token;
+    }
+
+    public void storeSpotifyRefreshToken(String spotifyRefreshToken) throws IOException,
+            BadPaddingException, NoSuchAlgorithmException, InvalidKeyException,
+            UnrecoverableEntryException, InvalidAlgorithmParameterException,
+            NoSuchPaddingException, NoSuchProviderException, SignatureException,
+            KeyStoreException, IllegalBlockSizeException {
+
+        SharedPreferences sharedPref =
+                context.getSharedPreferences(getString(R.string.preference_file_key),
+                                             Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        byte[] encrypted = encryptor.encryptText(getString(R.string.token_store_key),
+                                                 spotifyRefreshToken);
+        byte[] iv = encryptor.getIv();
+        String storedToken = Base64.encodeToString(encrypted, Base64.NO_WRAP);
+        String storedIV = Base64.encodeToString(iv, Base64.NO_WRAP);
+        editor.putString(getString(R.string.shared_preference_token_key), storedToken);
+        editor.putString(getString(R.string.shared_preferences_iv), storedIV);
+        editor.apply();
     }
 
     public void setSpotifyRefreshToken(String spotifyRefreshToken) {
@@ -394,7 +478,7 @@ public class ConnectionService extends Service {
             public void onEndpointLost(@NonNull String endpointId) {
                 Iterator<Endpoint> it = discoveredHosts.iterator();
                 while (it.hasNext()) {
-                    ConnectionService.Endpoint current = it.next();
+                    BackgroundService.Endpoint current = it.next();
                     if (current.getId().equals(endpointId)) {
                         it.remove();
                     }
@@ -408,7 +492,7 @@ public class ConnectionService extends Service {
         connectionsClient
             .startAdvertising(
                 roomName,
-                Main.APP_ENDPOINT,
+                MainActivity.APP_ENDPOINT,
                 serverConnectionLifecycleCallback,
                 new AdvertisingOptions(Strategy.P2P_STAR))
             .addOnSuccessListener(
@@ -434,7 +518,7 @@ public class ConnectionService extends Service {
     public void startDiscovery() {
         connectionsClient
             .startDiscovery(
-            Main.APP_ENDPOINT,
+            MainActivity.APP_ENDPOINT,
             endpointDiscoveryCallback,
             new DiscoveryOptions(Strategy.P2P_STAR))
             .addOnSuccessListener(
@@ -548,6 +632,11 @@ public class ConnectionService extends Service {
         emitPayload(clients, Payload.fromBytes(payload.getBytes()));
     }
 
+    public void emitSpotifyAccessTokenToConnectedClients(String spotifyAccessToken) {
+        String payload = "tok " + spotifyAccessToken;
+        emitPayload(connectedClients, Payload.fromBytes(payload.getBytes()));
+    }
+
     private void sendPayload(String endpointId, Payload payload) {
         emitPayload(Collections.singletonList(endpointId), payload);
     }
@@ -569,16 +658,44 @@ public class ConnectionService extends Service {
         lastRequest.enqueue(callback);
     }
 
-    public void getAccessAndRefreshToken(JSONObject authorizationCode, Callback callback) {
-        RequestBody body = RequestBody.create(JSON, authorizationCode.toString());
-        final Request request =
-                new Request.Builder()
-                           .url(API_ENDPOINT + "/spotify/token")
-                           .post(body)
-                           .build();
+    public void getAccessAndRefreshTokenFromCode(String authorizationCode, Callback callback) {
+        try {
+            JSONObject jsonBody = new JSONObject();
+            jsonBody.put("authorization_code", authorizationCode);
+            jsonBody.put("grant_type", "authorization_code");
+            Log.i(TAG, jsonBody.toString());
+            RequestBody body = RequestBody.create(JSON, jsonBody.toString());
+            final Request request =
+                    new Request.Builder()
+                            .url(API_ENDPOINT + "/spotify/token")
+                            .post(body)
+                            .build();
 
-        lastRequest = okHttpClient.newCall(request);
-        lastRequest.enqueue(callback);
+            lastRequest = okHttpClient.newCall(request);
+            lastRequest.enqueue(callback);
+        } catch (JSONException e) {
+            Log.e(TAG, "Error sending JSON request for refresh token: " + e.toString());
+        }
+    }
+
+    public void getAccessTokenFromRefreshToken(String refreshToken, Callback callback) {
+        try {
+            JSONObject jsonBody = new JSONObject();
+            jsonBody.put("refresh_token", refreshToken);
+            jsonBody.put("grant_type", "refresh_token");
+            Log.i(TAG, jsonBody.toString());
+            RequestBody body = RequestBody.create(JSON, jsonBody.toString());
+            final Request request =
+                    new Request.Builder()
+                            .url(API_ENDPOINT + "/spotify/token")
+                            .post(body)
+                            .build();
+
+            lastRequest = okHttpClient.newCall(request);
+            lastRequest.enqueue(callback);
+        } catch (JSONException e) {
+            Log.e(TAG, "Error sending JSON request for refresh token: " + e.toString());
+        }
     }
 
     private void cancelLastRequest() {
@@ -622,17 +739,5 @@ public class ConnectionService extends Service {
         public String toString() {
             return String.format("Endpoint{id=%s, name=%s}", id, name);
         }
-    }
-
-    protected interface RoomListListener {
-        void onRoomLost(String endpointId);
-        void onRoomFound(Endpoint host);
-    }
-
-    protected interface RoomNetworkListener {
-        void onSongAdded(Song song);
-        void onSongRemoved(Song song);
-        void onSongPlaying(Song song);
-        void onDisconnect();
     }
 }

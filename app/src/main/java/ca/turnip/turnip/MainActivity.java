@@ -1,4 +1,4 @@
-package ca.passtheaux.turnip;
+package ca.turnip.turnip;
 
 import android.Manifest;
 import android.content.Context;
@@ -9,12 +9,13 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 
-public class Main extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = Host.class.getSimpleName();
-    protected static final String APP_ENDPOINT = "ca.passtheaux.passtheaux";
-    protected static final String APP_REDIRECT_URI = "ca.passtheaux.passtheaux://callback";
-    protected static final String API_ENDPOINT = "http://passtheaux-eb-backend.xfsxdjirpz.us-west-2.elasticbeanstalk.com";
+    private static final String TAG = HostActivity.class.getSimpleName();
+    protected static final String APP_ENDPOINT = "ca.turnip.turnip";
+    protected static final String APP_REDIRECT_URI = "ca.turnip.turnip://callback";
+    //protected static final String API_ENDPOINT = "http://turnip-webserver-prod.us-west-2.elasticbeanstalk.com";
+    protected static final String API_ENDPOINT = "http://192.168.0.10:3001";
     protected static final String CLIENT_ID = "73c78b0a36de4ccfbe474c9e26ae8513";
     protected static final String KEY_STORE_ALIAS = "turnip_keystore";
 
@@ -33,7 +34,7 @@ public class Main extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        startService(new Intent(this, ConnectionService.class));
+        startService(new Intent(this, BackgroundService.class));
     }
 
     @Override
@@ -50,12 +51,12 @@ public class Main extends AppCompatActivity {
     }
 
     public void findAuxButtonClicked(View view) {
-        Intent roomListIntent = new Intent(this, RoomList.class);
+        Intent roomListIntent = new Intent(this, RoomListActivity.class);
         startActivity(roomListIntent);
     }
 
     public void hostButtonClicked(View view) {
-        Intent hostIntent = new Intent(this, Host.class);
+        Intent hostIntent = new Intent(this, HostActivity.class);
         startActivity(hostIntent);
     }
 

@@ -1,4 +1,4 @@
-package ca.passtheaux.turnip;
+package ca.turnip.turnip;
 
 import android.content.Context;
 import android.content.Intent;
@@ -15,7 +15,7 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.RoomLi
 
     private static final String TAG = RoomListAdapter.class.getSimpleName();
 
-    private ArrayList<ConnectionService.Endpoint> rooms;
+    private ArrayList<BackgroundService.Endpoint> rooms;
 
     public class RoomListViewHolder extends RecyclerView.ViewHolder {
 
@@ -32,7 +32,7 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.RoomLi
                 @Override
                 public void onClick(View v) {
                 final int pos = self.getLayoutPosition();
-                Intent roomIntent = new Intent(context, Room.class);
+                Intent roomIntent = new Intent(context, RoomActivity.class);
                 roomIntent.putExtra("roomName", textView.getText().toString());
                 roomIntent.putExtra("isHost", false);
                 roomIntent.putExtra("endpointId", rooms.get(pos).getId());
@@ -42,7 +42,7 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.RoomLi
         }
     }
 
-    public RoomListAdapter(ArrayList<ConnectionService.Endpoint> rooms) {
+    public RoomListAdapter(ArrayList<BackgroundService.Endpoint> rooms) {
         this.rooms = rooms;
     }
 
