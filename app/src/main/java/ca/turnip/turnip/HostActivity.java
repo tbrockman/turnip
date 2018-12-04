@@ -166,11 +166,11 @@ public class HostActivity extends SpotifyAuthenticatedActivity {
 
     public void startClicked(View view) {
         EditText roomName = (EditText) findViewById(R.id.roomName);
-        EditText roomPassword = (EditText) findViewById(R.id.roomPassword);
+//        EditText roomPassword = (EditText) findViewById(R.id.roomPassword);
 
         Intent roomIntent = new Intent(this, RoomActivity.class);
         roomIntent.putExtra("roomName", roomName.getText().toString());
-        roomIntent.putExtra("roomPassword", roomPassword.getText().toString());
+//        roomIntent.putExtra("roomPassword", roomPassword.getText().toString());
         roomIntent.putExtra("isHost", true);
 
         roomIntent.putExtra("spotifyEnabled", spotifyEnabled);

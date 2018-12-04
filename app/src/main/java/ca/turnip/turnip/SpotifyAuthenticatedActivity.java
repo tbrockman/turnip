@@ -60,6 +60,7 @@ public class SpotifyAuthenticatedActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e(TAG, "Error retrieving spotifyRefreshToken: " + e.toString());
         } finally {
+
             if (spotifyRefreshToken != null) {
                 backgroundService.getAccessTokenFromRefreshToken(spotifyRefreshToken,
                                                                  accessTokenCallback);
@@ -81,7 +82,7 @@ public class SpotifyAuthenticatedActivity extends AppCompatActivity {
 
         @Override
         public void onFailure(Call call, IOException e) {
-
+            Log.e(TAG, "Error retrieving access token:" + e.toString());
         }
 
         @Override
@@ -98,7 +99,7 @@ public class SpotifyAuthenticatedActivity extends AppCompatActivity {
                                                 spotifyExpiresIn * 1000);
             } catch (Exception e) {
                 openAuthenticationActivity();
-                Log.e(TAG, "Error retrieving access token: " + e.toString());
+                Log.e(TAG, "Error parsing/emitting access token: " + e.toString());
             }
         }
     };
@@ -107,7 +108,7 @@ public class SpotifyAuthenticatedActivity extends AppCompatActivity {
 
         @Override
         public void onFailure(Call call, IOException e) {
-
+            Log.e(TAG, "Error retrieving access/refresh token" + e.toString());
         }
 
         @Override
@@ -123,7 +124,7 @@ public class SpotifyAuthenticatedActivity extends AppCompatActivity {
                 backgroundService.storeSpotifyRefreshToken(spotifyRefreshToken);
                 backgroundService.setSpotifyAccessToken(spotifyAccessToken);
             } catch (Exception e) {
-                Log.e(TAG, "Error retrieving access and refresh tokens:" + e.toString());
+                Log.e(TAG, "Error parsing/storing access and refresh tokens:" + e.toString());
             }
         }
     };

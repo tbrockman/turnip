@@ -11,7 +11,7 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@drawable/ic_logo_svg"
+        android:icon="@drawable/ic_turnip_icon"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
@@ -48,8 +48,15 @@
             android:theme="@style/AppActionBarActivityTheme" />
         <activity
             android:name=".SongSearchActivity"
-            android:theme="@style/AppActionBarActivityTheme"
-            android:parentActivityName=".RoomActivity"/>
+            android:theme="@style/Empty"
+            android:launchMode="singleTop"
+            android:parentActivityName=".RoomActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.SEARCH" />
+            </intent-filter>
+            <meta-data android:name="android.app.searchable"
+                android:resource="@xml/searchable"/>
+        </activity>
         <activity android:name=".SpotifyAuthenticatedActivity"></activity>
     </application>
 

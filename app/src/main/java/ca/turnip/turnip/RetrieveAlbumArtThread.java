@@ -11,7 +11,7 @@ import java.net.URL;
 
 public class RetrieveAlbumArtThread implements Runnable {
 
-    private static final String TAG = SongSuggestionsAdapter.class.getSimpleName();
+    private static final String TAG = SongSearchResultsAdapter.class.getSimpleName();
 
     private Song suggestion;
     private String albumArtUrl;
@@ -34,5 +34,5 @@ public class RetrieveAlbumArtThread implements Runnable {
         } catch (IOException e) {
             Log.e(TAG, "Error retrieving album art from: " + albumArtUrl);
         }
-    }
+    }  
 }

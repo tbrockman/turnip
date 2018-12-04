@@ -7,15 +7,14 @@ import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SearchView;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
-
-import com.mancj.materialsearchbar.MaterialSearchBar;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -33,11 +32,15 @@ import okhttp3.Response;
 public class SongSearchActivity extends AppCompatActivity {
 
     private static final String TAG = SongSearchActivity.class.getSimpleName();
+    private Context context = this;
 
     // UI
 
     private LayoutInflater inflater;
-    private SongSuggestionsAdapter customSuggestionsAdapter;
+    private RecyclerView.LayoutManager songSearchLayoutManager;
+    private RecyclerView songSearchResultsRecyclerView;
+    private SongSearchResultsAdapter songSearchResultsAdapter;
+    private Toolbar toolbar;
 
     // Search results
 
@@ -68,42 +71,65 @@ public class SongSearchActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_song_search);
-
         bindConnectionService();
 
         songs = new ArrayList<>();
         searchTimer = new Timer();
-//        searchBar = (MaterialSearchBar) findViewById(R.id.searchBar);
-//        searchBar.addTextChangeListener(new TextWatcher() {
-//            @Override
-//            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
-//
-//            @Override
-//            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-//                if (searchTask != null) {
-//                    searchTask.cancel();
-//
-//                }
-//                searchTask = new TimerTask() {
-//                    @Override
-//                    public void run() {
-//                        backgroundService.searchSpotifyAPI(searchBar.getText(),
-//                                                          "track",
-//                                                           spotifySearchCallback);
-//                    }
-//                };
-//                searchTimer.schedule(searchTask, searchDelay);
-//            }
-//
-//            @Override
-//            public void afterTextChanged(Editable editable) {}
-//        });
+
+        songSearchResultsRecyclerView = findViewById(R.id.searchRecyclerView);
+        songSearchLayoutManager = new LinearLayoutManager(this);
+        songSearchResultsAdapter = new SongSearchResultsAdapter(songs, songClickedCallback);
+        songSearchResultsRecyclerView.setHasFixedSize(true);
+        songSearchResultsRecyclerView.setAdapter(songSearchResultsAdapter);
+        songSearchResultsRecyclerView.setLayoutManager(songSearchLayoutManager);
+
+        toolbar = findViewById(R.id.searchToolbar);
+
+        if (toolbar != null) {
+            setSupportActionBar(toolbar);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
+            toolbar.inflateMenu(R.menu.search_activity_menu);
+        }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.options_menu, menu);
+        getMenuInflater().inflate( R.menu.search_activity_menu, menu);
+
+        MenuItem searchItem = menu.findItem(R.id.search_bar);
+        SearchView searchView = (SearchView) searchItem.getActionView();
+
+        searchView.setOnQueryTextListener(
+            new SearchView.OnQueryTextListener() {
+                @Override
+                public boolean onQueryTextSubmit(String s) {
+                    backgroundService.searchSpotifyAPI(s,
+                            "track",
+                            spotifySearchCallback);
+                    return true;
+                }
+
+                @Override
+                public boolean onQueryTextChange(final String s) {
+
+                    if (searchTask != null) {
+                        searchTask.cancel();
+
+                    }
+                    searchTask = new TimerTask() {
+                        @Override
+                        public void run() {
+                            backgroundService.searchSpotifyAPI(s,
+                                    "track",
+                                    spotifySearchCallback);
+                        }
+                    };
+                    searchTimer.schedule(searchTask, searchDelay);
+                    return true;
+                }
+            }
+        );
         return true;
     }
 
@@ -124,13 +150,15 @@ public class SongSearchActivity extends AppCompatActivity {
         unbindService(connection);
     }
 
+    // Process intents
+
     // Search result click listener
 
     private SongClickedCallback songClickedCallback = new SongClickedCallback() {
         @Override
-        public void songChosen(int pos) {
+        public void songChosen(Song result) {
             Intent data = new Intent();
-            Song result = songs.get(pos);
+            //Song result = songs.get(pos);
             data.putExtra("song", result.toString());
             data.putExtra("type", "spotify");
             setResult(RESULT_OK, data);
@@ -155,14 +183,18 @@ public class SongSearchActivity extends AppCompatActivity {
                     try {
                         final JSONObject jsonResponse = new JSONObject(response.body().string());
                         final JSONArray jsonArray = jsonResponse.getJSONObject("tracks")
-                                                                .getJSONArray("items");
+                                .getJSONArray("items");
                         songs.clear();
                         for (int i = 0; i < jsonArray.length(); i++) {
                             Song song = new SpotifySong(jsonArray.getJSONObject(i));
                             songs.add(song);
+                            Log.i(TAG, "Song: " + song.toString());
                         }
-                        inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
-//                        customSuggestionsAdapter = new SongSuggestionsAdapter(inflater,
+
+                        songSearchResultsAdapter.notifyDataSetChanged();
+                        //inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
+
+//                        customSuggestionsAdapter = new SongSearchResultsAdapter(inflater,
 //                                                                              songClickedCallback);
 //                        customSuggestionsAdapter.setSuggestions(songs);
 //                        searchBar.setCustomSuggestionAdapter(customSuggestionsAdapter);
@@ -185,6 +217,6 @@ public class SongSearchActivity extends AppCompatActivity {
     }
 
     protected interface SongClickedCallback {
-        void songChosen(int pos);
+        void songChosen(Song result);
     }
 }

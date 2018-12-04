@@ -3,6 +3,7 @@ package ca.turnip.turnip;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -14,8 +15,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = HostActivity.class.getSimpleName();
     protected static final String APP_ENDPOINT = "ca.turnip.turnip";
     protected static final String APP_REDIRECT_URI = "ca.turnip.turnip://callback";
-    //protected static final String API_ENDPOINT = "http://turnip-webserver-prod.us-west-2.elasticbeanstalk.com";
-    protected static final String API_ENDPOINT = "http://192.168.0.10:3001";
+    protected static String API_ENDPOINT;
     protected static final String CLIENT_ID = "73c78b0a36de4ccfbe474c9e26ae8513";
     protected static final String KEY_STORE_ALIAS = "turnip_keystore";
 
@@ -34,6 +34,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        boolean isDebug = ((this.getApplicationInfo().flags &
+                ApplicationInfo.FLAG_DEBUGGABLE) != 0);
+
+        if (isDebug) {
+            API_ENDPOINT = "http://192.168.0.10:3001";
+        }
+        else {
+            API_ENDPOINT = "http://turnip-webserver-prod.us-west-2.elasticbeanstalk.com";
+        }
+
         startService(new Intent(this, BackgroundService.class));
     }
 

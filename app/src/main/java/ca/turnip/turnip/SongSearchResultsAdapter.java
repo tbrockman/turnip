@@ -15,45 +15,51 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
-public class SongQueueAdapter extends RecyclerView.Adapter<SongQueueAdapter.SongViewHolder> {
+public class SongSearchResultsAdapter
+        extends RecyclerView.Adapter<SongSearchResultsAdapter.SongViewHolder> {
 
-    private ArrayList<Song> songQueue;
+    private ArrayList<Song> suggestions;
+    private SongSearchActivity.SongClickedCallback songClickedCallback;
 
-    public SongQueueAdapter(ArrayList<Song> songQueue) {
-        this.songQueue = songQueue;
+    public SongSearchResultsAdapter(ArrayList<Song> suggestions,
+                                    SongSearchActivity.SongClickedCallback callback) {
+        this.suggestions = suggestions;
+        this.songClickedCallback = callback;
     }
+
+    private static final String TAG = SongSearchResultsAdapter.class.getSimpleName();
 
     @NonNull
     @Override
-    public SongQueueAdapter.SongViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
+    public SongSearchResultsAdapter.SongViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup,
+                                                                      int i) {
         View v = LayoutInflater.from(
                 viewGroup.getContext()).inflate(R.layout.song,
                 viewGroup,
                 false
         );
 
-        SongQueueAdapter.SongViewHolder vh = new SongQueueAdapter.SongViewHolder(v);
+        SongSearchResultsAdapter.SongViewHolder vh = new SongSearchResultsAdapter.SongViewHolder(v);
 
         return vh;
     }
 
     @Override
-    public void onBindViewHolder(@NonNull SongQueueAdapter.SongViewHolder songViewHolder, int i) {
-        // SongViewHolder.
-        Song song = songQueue.get(i);
-        songViewHolder.songName.setText(song.getString("name"));
-        songViewHolder.artist.setText(TextUtils.join(", ", song.getArtists()));
-        songViewHolder.albumArt.setImageBitmap(song.getAlbumArt());
+    public void onBindViewHolder(@NonNull SongViewHolder songViewHolder, int i) {
+
+        Song suggestion = suggestions.get(i);
+        songViewHolder.songName.setText(suggestion.getString("name"));
+        songViewHolder.artist.setText(TextUtils.join(", ", suggestion.getArtists()));
+
         try {
-            if (!song.hasAlbumArt()) {
-                JSONObject album = song.get("album");
+            if (!suggestion.hasAlbumArt()) {
+                JSONObject album = suggestion.get("album");
                 JSONArray albumImages = album.getJSONArray("images");
                 JSONObject imageInfoJSON = albumImages.getJSONObject(albumImages.length()-1);
                 String albumArtUrl = imageInfoJSON.getString("url");
-                Thread retrieveAlbumArt = new Thread(
-                                             new RetrieveAlbumArtThread(song,
-                                                                        albumArtUrl,
-                                                                        songViewHolder.albumArt));
+                Thread retrieveAlbumArt = new Thread(new RetrieveAlbumArtThread(suggestion,
+                        albumArtUrl,
+                        songViewHolder.albumArt));
                 retrieveAlbumArt.start();
             }
         } catch (JSONException e) {
@@ -63,33 +69,27 @@ public class SongQueueAdapter extends RecyclerView.Adapter<SongQueueAdapter.Song
 
     @Override
     public int getItemCount() {
-        return songQueue.size();
+        return suggestions.size();
     }
 
     public class SongViewHolder extends RecyclerView.ViewHolder {
-
         TextView songName;
         TextView artist;
         ImageView albumArt;
-        ImageView plusSign;
-
-        SongViewHolder self = this;
 
         public SongViewHolder(View itemView) {
             super(itemView);
             songName = (TextView) itemView.findViewById(R.id.songName);
             artist = (TextView) itemView.findViewById(R.id.artist);
             albumArt = (ImageView) itemView.findViewById(R.id.albumArt);
-            plusSign = (ImageView) itemView.findViewById(R.id.addSongPlus);
 
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    int i = getAdapterPosition();
+                    songClickedCallback.songChosen(suggestions.get(i));
                 }
             });
-
-            plusSign.setVisibility(View.INVISIBLE);
         }
     }
-
 }

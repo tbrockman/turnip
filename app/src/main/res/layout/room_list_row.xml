@@ -17,6 +17,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:fontFamily="@font/fredoka_one"
             android:text="testtext"
             android:textColor="@color/colorButtonTextPrimary"
             android:textSize="24sp" />

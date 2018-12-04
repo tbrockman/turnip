@@ -40,6 +40,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
+                android:fontFamily="sans-serif"
                 android:singleLine="true"
                 android:text="TextView"
                 android:textColor="@color/colorButtonTextPrimary"
