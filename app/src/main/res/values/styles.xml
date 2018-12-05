@@ -13,6 +13,12 @@
         <item name="actionBarStyle">@style/ActionBarStyle</item>
     </style>
 
+    <style name="SearchViewStyle" parent="Widget.AppCompat.SearchView">
+        <item name="submitBackground">@android:color/transparent</item>
+        <item name="queryBackground">@android:color/transparent</item>
+        <item name="searchHintIcon">@null</item>
+    </style>
+
     <style name="ActionBarStyle" parent="@style/Widget.AppCompat.ActionBar">
         <item name="android:titleTextStyle">@style/ActionBarTitleColor</item>
         <item name="titleTextStyle">@style/ActionBarTitleColor</item>
@@ -29,6 +35,7 @@
     <style name="Empty" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowContentOverlay">@null</item>
+        <item name="searchViewStyle">@style/SearchViewStyle</item>
     </style>
 
     <style name="ButtonStyle">

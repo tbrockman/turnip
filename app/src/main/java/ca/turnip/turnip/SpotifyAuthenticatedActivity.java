@@ -116,6 +116,7 @@ public class SpotifyAuthenticatedActivity extends AppCompatActivity {
             // TODO: store access and refresh tokens on device
             try {
                 final JSONObject jsonResponse = new JSONObject(response.body().string());
+                Log.i(TAG, jsonResponse.toString());
                 spotifyAccessToken = jsonResponse.getString("access_token");
                 spotifyRefreshToken = jsonResponse.getString("refresh_token");
                 spotifyExpiresIn = Integer.valueOf(jsonResponse.getString("expires_in"));

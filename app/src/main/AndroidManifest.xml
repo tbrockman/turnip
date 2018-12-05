@@ -35,21 +35,25 @@
             android:name=".HostActivity"
             android:label="@string/title_activity_host"
             android:parentActivityName=".MainActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
             android:theme="@style/AppActionBarActivityTheme" />
         <activity
             android:name=".RoomActivity"
             android:label="Room"
             android:parentActivityName=".MainActivity"
-            android:theme="@style/AppActionBarActivityTheme" />
+            android:theme="@style/AppActionBarActivityTheme"
+            android:configChanges="orientation|keyboardHidden|screenSize"/>
         <activity
             android:name=".RoomListActivity"
             android:label="Rooms"
             android:parentActivityName=".MainActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
             android:theme="@style/AppActionBarActivityTheme" />
         <activity
             android:name=".SongSearchActivity"
             android:theme="@style/Empty"
             android:launchMode="singleTop"
+            android:configChanges="orientation|keyboardHidden|screenSize"
             android:parentActivityName=".RoomActivity">
             <intent-filter>
                 <action android:name="android.intent.action.SEARCH" />

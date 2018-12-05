@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Handler;
 import android.os.IBinder;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AlertDialog;
 import android.os.Bundle;
@@ -200,50 +201,48 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_room);
 
-        bindRoomActivityConnectionService();
-        Log.i(TAG, "creating room activity");
-        Intent intent = getIntent();
-        isHost = intent.getBooleanExtra("isHost", false);
-        roomName = intent.getStringExtra("roomName");
-        roomPassword = intent.getStringExtra("roomPassword");
-        endpointId = intent.getStringExtra("endpointId");
-        spotifyEnabled = intent.getBooleanExtra("spotifyEnabled", false);
+        if (savedInstanceState == null) {
+            bindRoomActivityConnectionService();
+            Log.i(TAG, "creating room activity");
 
-        if (spotifyEnabled && isHost) {
-            initializeSpotifyAuthentication(intent);
+            Intent intent = assignIntentVariables();
+
+            if (spotifyEnabled && isHost) {
+                initializeSpotifyAuthentication(intent);
+            }
+
+            setTitle(roomName);
+
+            assignViewElementVariables();
+
+            fab.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    startSongAddActivity();
+                }
+            });
+
+            skipButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (isHost) {
+                        backgroundService.skipCurrentSong();
+                    }
+                    else {
+                        // TODO: vote to skip
+                    }
+                }
+            });
+
+            songQueue = new ArrayList();
+            layoutManager = new LinearLayoutManager(this);
+            adapter = new SongQueueAdapter(songQueue, this);
+            recyclerView.setLayoutManager(layoutManager);
+            recyclerView.setAdapter(adapter);
+
+            renderCurrentlyPlaying();
+            renderSongQueueEmpty();
         }
-
-        setTitle(roomName);
-
-        assignViewElementVariables();
-
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startSongAddActivity();
-            }
-        });
-
-        skipButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (isHost) {
-                    backgroundService.skipCurrentSong();
-                }
-                else {
-                    // TODO: vote to skip
-                }
-            }
-        });
-
-        songQueue = new ArrayList();
-        layoutManager = new LinearLayoutManager(this);
-        adapter = new SongQueueAdapter(songQueue);
-        recyclerView.setLayoutManager(layoutManager);
-        recyclerView.setAdapter(adapter);
-
-        renderCurrentlyPlaying();
-        renderSongQueueEmpty();
     }
 
     private void initializeSpotifyAuthentication(Intent intent) {
@@ -282,6 +281,17 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
             }
         };
         bindConnectionService(this);
+    }
+
+    @NonNull
+    private Intent assignIntentVariables() {
+        Intent intent = getIntent();
+        isHost = intent.getBooleanExtra("isHost", false);
+        roomName = intent.getStringExtra("roomName");
+        roomPassword = intent.getStringExtra("roomPassword");
+        endpointId = intent.getStringExtra("endpointId");
+        spotifyEnabled = intent.getBooleanExtra("spotifyEnabled", false);
+        return intent;
     }
 
     private void assignViewElementVariables() {

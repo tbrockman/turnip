@@ -64,8 +64,7 @@
             android:drawableTint="@color/colorButtonTextPrimary"
             android:fontFamily="@font/fredoka_one"
             android:onClick="findAuxButtonClicked"
-            android:text="find_rooms_buttonFind an aux"
-            tools:text="@string/join_button_text" />
+            android:text="@string/join_button_text" />
 
     </LinearLayout>
 

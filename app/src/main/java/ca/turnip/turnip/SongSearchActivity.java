@@ -1,5 +1,6 @@
 package ca.turnip.turnip;
 
+import android.app.SearchManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -39,8 +40,10 @@ public class SongSearchActivity extends AppCompatActivity {
     private LayoutInflater inflater;
     private RecyclerView.LayoutManager songSearchLayoutManager;
     private RecyclerView songSearchResultsRecyclerView;
+    private SearchView searchView;
     private SongSearchResultsAdapter songSearchResultsAdapter;
     private Toolbar toolbar;
+
 
     // Search results
 
@@ -78,12 +81,13 @@ public class SongSearchActivity extends AppCompatActivity {
 
         songSearchResultsRecyclerView = findViewById(R.id.searchRecyclerView);
         songSearchLayoutManager = new LinearLayoutManager(this);
-        songSearchResultsAdapter = new SongSearchResultsAdapter(songs, songClickedCallback);
+        songSearchResultsAdapter = new SongSearchResultsAdapter(songs, this, songClickedCallback);
         songSearchResultsRecyclerView.setHasFixedSize(true);
         songSearchResultsRecyclerView.setAdapter(songSearchResultsAdapter);
         songSearchResultsRecyclerView.setLayoutManager(songSearchLayoutManager);
 
         toolbar = findViewById(R.id.searchToolbar);
+        //toolbar.setContentInsetsAbsolute(0,0);
 
         if (toolbar != null) {
             setSupportActionBar(toolbar);
@@ -98,8 +102,11 @@ public class SongSearchActivity extends AppCompatActivity {
         getMenuInflater().inflate( R.menu.search_activity_menu, menu);
 
         MenuItem searchItem = menu.findItem(R.id.search_bar);
-        SearchView searchView = (SearchView) searchItem.getActionView();
-
+        searchView = (SearchView) searchItem.getActionView();
+        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        searchView.setIconified(false);
+        searchView.setMaxWidth( Integer.MAX_VALUE );
         searchView.setOnQueryTextListener(
             new SearchView.OnQueryTextListener() {
                 @Override
@@ -130,7 +137,8 @@ public class SongSearchActivity extends AppCompatActivity {
                 }
             }
         );
-        return true;
+
+        return super.onCreateOptionsMenu(menu);
     }
 
     @Override
@@ -142,6 +150,15 @@ public class SongSearchActivity extends AppCompatActivity {
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
+            String query = intent.getStringExtra(SearchManager.QUERY);
+            searchView.setQuery(String.valueOf(query), false);
+        }
     }
 
     @Override

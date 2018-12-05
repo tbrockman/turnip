@@ -1,8 +1,12 @@
 package ca.turnip.turnip;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,15 +19,20 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
+import static ca.turnip.turnip.SongQueueAdapter.cancelPotentialWork;
+
 public class SongSearchResultsAdapter
         extends RecyclerView.Adapter<SongSearchResultsAdapter.SongViewHolder> {
 
     private ArrayList<Song> suggestions;
+    private Context context;
     private SongSearchActivity.SongClickedCallback songClickedCallback;
 
     public SongSearchResultsAdapter(ArrayList<Song> suggestions,
+                                    Context context,
                                     SongSearchActivity.SongClickedCallback callback) {
         this.suggestions = suggestions;
+        this.context = context;
         this.songClickedCallback = callback;
     }
 
@@ -45,22 +54,34 @@ public class SongSearchResultsAdapter
     }
 
     @Override
-    public void onBindViewHolder(@NonNull SongViewHolder songViewHolder, int i) {
+    public void onBindViewHolder(@NonNull SongSearchResultsAdapter.SongViewHolder songViewHolder, int i) {
+        // SongViewHolder.
+        int albumArtImageViewId = songViewHolder.albumArt.getId();
+        Song song = suggestions.get(i);
 
-        Song suggestion = suggestions.get(i);
-        songViewHolder.songName.setText(suggestion.getString("name"));
-        songViewHolder.artist.setText(TextUtils.join(", ", suggestion.getArtists()));
-
+        songViewHolder.songName.setText(song.getString("name"));
+        songViewHolder.artist.setText(TextUtils.join(", ", song.getArtists()));
         try {
-            if (!suggestion.hasAlbumArt()) {
-                JSONObject album = suggestion.get("album");
+            if (!song.hasAlbumArt()) {
+                JSONObject album = song.get("album");
                 JSONArray albumImages = album.getJSONArray("images");
+                Log.i(TAG, albumImages.toString());
                 JSONObject imageInfoJSON = albumImages.getJSONObject(albumImages.length()-1);
                 String albumArtUrl = imageInfoJSON.getString("url");
-                Thread retrieveAlbumArt = new Thread(new RetrieveAlbumArtThread(suggestion,
-                        albumArtUrl,
-                        songViewHolder.albumArt));
-                retrieveAlbumArt.start();
+                if (cancelPotentialWork(albumArtImageViewId, songViewHolder.albumArt)) {
+                    RetrieveAlbumArtTask task = new RetrieveAlbumArtTask(song,
+                            albumArtUrl,
+                            songViewHolder.albumArt);
+                    Bitmap placeholder = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_logo_svg);
+                    final SongQueueAdapter.AsyncDrawable asyncDrawable =
+                            new SongQueueAdapter.AsyncDrawable(context.getResources(), placeholder, task);
+                    songViewHolder.albumArt.setImageDrawable(asyncDrawable);
+                    task.execute(songViewHolder.albumArt.getId());
+                }
+
+            }
+            else {
+                songViewHolder.albumArt.setImageBitmap(song.getAlbumArt());
             }
         } catch (JSONException e) {
             e.printStackTrace();

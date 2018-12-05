@@ -11,10 +11,11 @@
 
     <android.support.v7.widget.Toolbar
         android:id="@+id/searchToolbar"
-        android:layout_width="match_parent"
+        android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        app:theme="@style/ActionBarStyle"></android.support.v7.widget.Toolbar>
+        app:theme="@style/ActionBarStyle"></android.support.v7.widget.Toolbar
+        >
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/searchRecyclerView"

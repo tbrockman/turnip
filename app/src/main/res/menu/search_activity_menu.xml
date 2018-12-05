@@ -3,9 +3,11 @@
       xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/search_bar"
+        android:layout_width="fill_parent"
+        android:layout_height="match_parent"
         android:icon="@drawable/ic_baseline_search_24px"
         android:title="@string/search_title"
-        android:iconTint="@color/white"
+        app:actionLayout="@layout/search_view_layout"
         app:actionViewClass="android.support.v7.widget.SearchView"
-        app:showAsAction="collapseActionView|ifRoom" />
+        app:showAsAction="always|collapseActionView" />
 </menu>

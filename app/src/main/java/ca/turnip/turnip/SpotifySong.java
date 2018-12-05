@@ -78,11 +78,15 @@ class SpotifySong extends Song {
     public Bitmap getAlbumArt() {
 
         if (this.albumArt == null) {
-            byte[] decodedString = Base64.decode(getString("bitmap"), Base64.DEFAULT);
-            Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString,
-                                                         0,
-                                                               decodedString.length);
-            this.albumArt = decodedByte;
+            String stringBitmap = getString("bitmap");
+
+            if (stringBitmap != null) {
+                byte[] decodedString = Base64.decode(getString("bitmap"), Base64.DEFAULT);
+                Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString,
+                        0,
+                        decodedString.length);
+                this.albumArt = decodedByte;
+            }
         }
 
         return this.albumArt;
