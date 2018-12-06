@@ -62,6 +62,14 @@ class SpotifySong extends Song {
         return this.albumArt;
     }
 
+    public String getAlbumArtURL() throws JSONException {
+        JSONObject album = this.get("album");
+        JSONArray albumImages = album.getJSONArray("images");
+        JSONObject imageInfoJSON = albumImages.getJSONObject(albumImages.length()-1);
+        String albumArtUrl = imageInfoJSON.getString("url");
+        return albumArtUrl;
+    }
+
     public JSONArray getArray(String key) {
         try {
             return jsonSong.getJSONArray(key);

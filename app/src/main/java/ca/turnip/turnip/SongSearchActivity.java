@@ -87,7 +87,6 @@ public class SongSearchActivity extends AppCompatActivity {
         songSearchResultsRecyclerView.setLayoutManager(songSearchLayoutManager);
 
         toolbar = findViewById(R.id.searchToolbar);
-        //toolbar.setContentInsetsAbsolute(0,0);
 
         if (toolbar != null) {
             setSupportActionBar(toolbar);
@@ -127,9 +126,11 @@ public class SongSearchActivity extends AppCompatActivity {
                     searchTask = new TimerTask() {
                         @Override
                         public void run() {
-                            backgroundService.searchSpotifyAPI(s,
-                                    "track",
-                                    spotifySearchCallback);
+                            if (s.length() > 0) {
+                                backgroundService.searchSpotifyAPI(s,
+                                        "track",
+                                        spotifySearchCallback);
+                            }
                         }
                     };
                     searchTimer.schedule(searchTask, searchDelay);
@@ -210,13 +211,6 @@ public class SongSearchActivity extends AppCompatActivity {
                         }
 
                         songSearchResultsAdapter.notifyDataSetChanged();
-                        //inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
-
-//                        customSuggestionsAdapter = new SongSearchResultsAdapter(inflater,
-//                                                                              songClickedCallback);
-//                        customSuggestionsAdapter.setSuggestions(songs);
-//                        searchBar.setCustomSuggestionAdapter(customSuggestionsAdapter);
-//                        searchBar.showSuggestionsList();
                     } catch (JSONException e) {
                         Log.e(TAG, "Error converting search response body to JSON.");
                     } catch (IOException e) {

@@ -6,7 +6,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Bitmap;
-import android.os.Handler;
+import android.graphics.BitmapFactory;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
@@ -18,6 +18,7 @@ import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -47,12 +48,15 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
     private LinearLayout currentSongContainer;
     private RecyclerView recyclerView;
     private SongQueueAdapter adapter;
+    private FrameLayout loadingRoomSpinnerLayout;
+    // Currently playing
     private AppCompatImageView skipButton;
     private TextView artist;
     private TextView songName;
     private TextView songTime;
     private ImageView albumArt;
     private ProgressBar timeProgressBar;
+    private ProgressBar albumArtSpinner;
 
     // Currently playing data
 
@@ -121,6 +125,10 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
             }
 
             //TODO: implement network method for pause/resume song
+            @Override
+            public void onConnect() {
+                renderSongQueueEmpty();
+            }
 
             @Override
             public void onDisconnect() {
@@ -141,49 +149,6 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
             }
     };
 
-    // Currently playing
-
-    private void renderCurrentlyPlaying() {
-        if (currentlyPlaying != null) {
-            if (songQueue.size() == 0) {
-                skipButton.setVisibility(View.GONE);
-            }
-            else {
-                skipButton.setVisibility(View.VISIBLE);
-            }
-            artist.setText(TextUtils.join(", ", currentlyPlaying.getArtists()));
-            albumArt.setImageBitmap(currentlyPlaying.getAlbumArt());
-            songName.setText(currentlyPlaying.getString("name"));
-            currentSongContainer.setVisibility(View.VISIBLE);
-            renderCurrentlyPlayingProgress();
-        }
-        else {
-            currentSongContainer.setVisibility(View.GONE);
-        }
-    }
-
-    private void renderCurrentlyPlayingProgress() {
-        if (timeElapsed >= 0) {
-            songTime.setText(secondsToString(timeElapsed));
-        }
-        if (songLength > 0) {
-            timeProgressBar.setProgress((int) Math.ceil(timeElapsed * 100 / songLength));
-        }
-    }
-
-    private void renderSongQueueEmpty() {
-        if (currentlyPlaying == null) {
-            noSongsContainer.setVisibility(View.VISIBLE);
-        }
-        else {
-            noSongsContainer.setVisibility(View.GONE);
-        }
-    }
-
-    public String secondsToString(int seconds) {
-        return String.format(Locale.US, "%01d:%02d", seconds / 60, seconds % 60);
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -191,7 +156,6 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
 
         if (savedInstanceState == null) {
             bindRoomActivityConnectionService();
-            Log.i(TAG, "creating room activity");
 
             Intent intent = assignIntentVariables();
 
@@ -233,6 +197,80 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
         }
     }
 
+    // Currently playing
+
+    private void renderCurrentlyPlaying() {
+        if (currentlyPlaying != null) {
+            if (songQueue.size() == 0) {
+                skipButton.setVisibility(View.GONE);
+            }
+            else {
+                skipButton.setVisibility(View.VISIBLE);
+            }
+
+            if (currentlyPlaying.hasAlbumArt()) {
+                albumArt.setImageBitmap(currentlyPlaying.getAlbumArt());
+                albumArtSpinner.setVisibility(View.GONE);
+                albumArt.setVisibility(View.VISIBLE);
+            }
+            else {
+                String albumArtUrl = null;
+                try {
+                    albumArtUrl = currentlyPlaying.getAlbumArtURL();
+                } catch(JSONException e) {
+                  Log.e(TAG, e.toString());
+                } finally {
+                    if (albumArtUrl != null) {
+                        RetrieveAlbumArtTask task = new RetrieveAlbumArtTask(currentlyPlaying,
+                                                                             albumArtUrl,
+                                                                             albumArt,
+                                                                             albumArtSpinner);
+                        Bitmap placeholder = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_logo_svg);
+                        final SongQueueAdapter.AsyncDrawable asyncDrawable =
+                                new SongQueueAdapter.AsyncDrawable(context.getResources(), placeholder, task);
+                        albumArt.setImageDrawable(asyncDrawable);
+                        task.execute();
+                    }
+                }
+            }
+
+            artist.setText(TextUtils.join(", ", currentlyPlaying.getArtists()));
+            songName.setText(currentlyPlaying.getString("name"));
+            currentSongContainer.setVisibility(View.VISIBLE);
+            renderCurrentlyPlayingProgress();
+        }
+        else {
+            currentSongContainer.setVisibility(View.GONE);
+        }
+    }
+
+    private void renderCurrentlyPlayingProgress() {
+        if (timeElapsed >= 0) {
+            songTime.setText(secondsToString(timeElapsed));
+        }
+        if (songLength > 0) {
+            timeProgressBar.setProgress((int) Math.ceil(timeElapsed * 100 / songLength));
+        }
+    }
+
+    private void renderSongQueueEmpty() {
+        if (currentlyPlaying == null) {
+            if (isHost ||
+                (backgroundService != null && backgroundService.getSpotifyAccessToken() != null)) {
+                noSongsContainer.setVisibility(View.VISIBLE);
+                loadingRoomSpinnerLayout.setVisibility(View.GONE);
+            }
+        }
+        else {
+            loadingRoomSpinnerLayout.setVisibility(View.GONE);
+            noSongsContainer.setVisibility(View.GONE);
+        }
+    }
+
+    public String secondsToString(int seconds) {
+        return String.format(Locale.US, "%01d:%02d", seconds / 60, seconds % 60);
+    }
+
     private void initializeSpotifyAuthentication(Intent intent) {
         spotifyAccessToken = intent.getStringExtra("spotifyAccessToken");
         spotifyRefreshToken = intent.getStringExtra("spotifyRefreshToken");
@@ -251,8 +289,6 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
                     backgroundService.setUpJukebox(isHost);
 
                     if (isHost) {
-//                        backgroundService.setSpotifyAccessToken(spotifyAccessToken);
-//                        backgroundService.setSpotifyRefreshToken(spotifyRefreshToken);
                         backgroundService.startAdvertising(roomName);
                     }
                     else {
@@ -293,6 +329,8 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
         songTime = findViewById(R.id.songTime);
         skipButton = findViewById(R.id.skipButton);
         timeProgressBar = findViewById(R.id.timeElapsed);
+        albumArtSpinner = findViewById(R.id.albumArtSpinner);
+        loadingRoomSpinnerLayout = findViewById(R.id.loadingRoomSpinnerLayout);
     }
 
     @Override
@@ -300,8 +338,6 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
         if (this.isHost) {
             Log.i(TAG, "Calling onDestroy here");
             backgroundService.stopAdvertising();
-        } else {
-            backgroundService.stopDiscovery();
         }
         Log.i(TAG, "calling RoomActivity on destroy now");
         backgroundService.unsubscribeRoomJukeboxListener();

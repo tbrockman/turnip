@@ -216,6 +216,12 @@ public class BackgroundService extends Service {
         }
     }
 
+    private void notifyConnected() {
+        if (roomJukeboxListener != null) {
+            roomJukeboxListener.onConnect();
+        }
+    }
+
     private void notifyDisconnected() {
         if (roomJukeboxListener != null) {
             roomJukeboxListener.onDisconnect();
@@ -362,6 +368,9 @@ public class BackgroundService extends Service {
                         case "tok":
                             String spotifyToken = raw.substring(4);
                             setSpotifyAccessToken(spotifyToken);
+                            notifyConnected(); // TODO: this shouldn't be called here
+                                                // should have an actual way of knowing when a connection
+                                                // has been established and all initial data has been transferred
                             break;
                         // Someone has added a new song to the queue
                         case "add":
@@ -584,7 +593,6 @@ public class BackgroundService extends Service {
         if (jukebox != null) {
             if (jukebox.getCurrentlyPlaying() != null || !isHost) {
                 // TODO: jukebox should probably do notification itself
-                Log.i(TAG, "here????");
                 notifySongAdded(song);
                 jukebox.enqueueSong(song);
                 emitSongAdded(connectedClients, song);
@@ -670,9 +678,9 @@ public class BackgroundService extends Service {
             RequestBody body = RequestBody.create(JSON, jsonBody.toString());
             final Request request =
                     new Request.Builder()
-                            .url(API_ENDPOINT + "/spotify/token")
-                            .post(body)
-                            .build();
+                               .url(API_ENDPOINT + "/spotify/token")
+                               .post(body)
+                               .build();
 
             lastRequest = okHttpClient.newCall(request);
             lastRequest.enqueue(callback);

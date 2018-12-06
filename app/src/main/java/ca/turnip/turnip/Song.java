@@ -30,6 +30,7 @@ public abstract class Song {
     abstract void setAlbumArt(Bitmap bitmap);
     abstract void setTimeElapsed(int timeElapsed);
     abstract Bitmap getAlbumArt();
+    abstract String getAlbumArtURL() throws JSONException;
     abstract ArrayList<String> getArtists();
     abstract String getSongType();
 }

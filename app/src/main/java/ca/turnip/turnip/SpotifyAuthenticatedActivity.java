@@ -95,8 +95,9 @@ public class SpotifyAuthenticatedActivity extends AppCompatActivity {
                 spotifyExpiresIn = Integer.valueOf(jsonResponse.getString("expires_in"));
                 backgroundService.setSpotifyAccessToken(spotifyAccessToken);
                 backgroundService.emitSpotifyAccessTokenToConnectedClients(spotifyAccessToken);
+                // refresh 5 minutes before token expiry
                 spotifyTimerHandler.postDelayed(spotifyRefreshTokenTimer,
-                                                spotifyExpiresIn * 1000);
+                                     (spotifyExpiresIn-5) * 1000);
             } catch (Exception e) {
                 openAuthenticationActivity();
                 Log.e(TAG, "Error parsing/emitting access token: " + e.toString());

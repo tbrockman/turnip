@@ -85,7 +85,7 @@ public class RoomListActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        Log.i(TAG, "RoomActivity list on start.");
+        Log.i(TAG, "RoomActivity list on resume.");
         if (backgroundService != null) {
             rooms = backgroundService.getDiscoveredHosts();
             Log.i(TAG, "not null" + rooms.toString());
@@ -105,6 +105,7 @@ public class RoomListActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        backgroundService.stopDiscovery();
         unbindService(connection);
     }
 

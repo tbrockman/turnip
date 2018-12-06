@@ -110,5 +110,4 @@ class ServerJukebox extends Jukebox {
         SpotifyAppRemote.CONNECTOR.disconnect(spotifyAppRemote);
         spotifyIsConnected = false;
     }
-
 }

@@ -53,19 +53,14 @@ public class SongQueueAdapter extends RecyclerView.Adapter<SongQueueAdapter.Song
     @Override
     public void onBindViewHolder(@NonNull SongQueueAdapter.SongViewHolder songViewHolder, int i) {
         // SongViewHolder.
-        int albumArtImageViewId = songViewHolder.albumArt.getId();
         Song song = songQueue.get(i);
 
         songViewHolder.songName.setText(song.getString("name"));
         songViewHolder.artist.setText(TextUtils.join(", ", song.getArtists()));
         try {
             if (!song.hasAlbumArt()) {
-                JSONObject album = song.get("album");
-                JSONArray albumImages = album.getJSONArray("images");
-                Log.i(TAG, albumImages.toString());
-                JSONObject imageInfoJSON = albumImages.getJSONObject(albumImages.length()-1);
-                String albumArtUrl = imageInfoJSON.getString("url");
-                if (cancelPotentialWork(albumArtImageViewId, songViewHolder.albumArt)) {
+                String albumArtUrl = song.getAlbumArtURL();
+                if (cancelPotentialWork(albumArtUrl, songViewHolder.albumArt)) {
                     RetrieveAlbumArtTask task = new RetrieveAlbumArtTask(song,
                                                                          albumArtUrl,
                                                                          songViewHolder.albumArt,
@@ -74,12 +69,11 @@ public class SongQueueAdapter extends RecyclerView.Adapter<SongQueueAdapter.Song
                     final AsyncDrawable asyncDrawable =
                             new AsyncDrawable(context.getResources(), placeholder, task);
                     songViewHolder.albumArt.setImageDrawable(asyncDrawable);
-                    task.execute(songViewHolder.albumArt.getId());
+                    task.execute();
                 }
 
             }
             else {
-                Log.i(TAG, "here insteaded");
                 songViewHolder.albumArt.setImageBitmap(song.getAlbumArt());
                 songViewHolder.albumArt.setVisibility(View.VISIBLE);
                 songViewHolder.progressBar.setVisibility(View.INVISIBLE);
@@ -137,11 +131,11 @@ public class SongQueueAdapter extends RecyclerView.Adapter<SongQueueAdapter.Song
         }
     }
 
-    static boolean cancelPotentialWork(int id, ImageView imageView) {
+    static boolean cancelPotentialWork(String url, ImageView imageView) {
         final RetrieveAlbumArtTask retrieveAlbumArtTask = getRetrieveAlbumArtTask(imageView);
         if (retrieveAlbumArtTask != null) {
-            final int resId = retrieveAlbumArtTask.resId;
-            if (id != resId) {
+            final String albumArtUrl = retrieveAlbumArtTask.albumArtUrl;
+            if ((albumArtUrl == null) || (!albumArtUrl.equals(url))) {
                 retrieveAlbumArtTask.cancel(true);
             }
             else {

@@ -14,14 +14,12 @@ import java.net.URL;
 
 import static ca.turnip.turnip.SongQueueAdapter.getRetrieveAlbumArtTask;
 
-public class RetrieveAlbumArtTask extends AsyncTask<Integer, Void, Bitmap> {
+public class RetrieveAlbumArtTask extends AsyncTask<Void, Void, Bitmap> {
 
     private Song song;
-    private final String albumArtUrl;
+    public final String albumArtUrl;
     private final WeakReference<ImageView> albumArtImageViewReference;
     private final WeakReference<ProgressBar> albumArtProgressBarReference;
-
-    Integer resId = 0;
 
     public RetrieveAlbumArtTask(Song song, String albumArtUrl, ImageView albumArt, ProgressBar albumArtProgressBarReference) {
         this.song = song;
@@ -39,8 +37,7 @@ public class RetrieveAlbumArtTask extends AsyncTask<Integer, Void, Bitmap> {
     }
 
     @Override
-    protected Bitmap doInBackground(Integer... data) {
-        this.resId = data[0];
+    protected Bitmap doInBackground(Void... params) {
         Bitmap bitmap = null;
         try {
             bitmap = BitmapFactory.decodeStream(

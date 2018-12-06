@@ -22,13 +22,26 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
-            <ImageView
-                android:id="@+id/albumArt"
-                android:layout_width="60dp"
+            <FrameLayout
+                android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:layout_weight="0"
-                android:contentDescription="@string/album_art_content_description"
-                app:srcCompat="@color/common_google_signin_btn_text_dark_focused" />
+                android:layout_weight="0">
+
+                <ImageView
+                    android:id="@+id/albumArt"
+                    android:layout_width="60dp"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@string/album_art_content_description"
+                    android:visibility="invisible"
+                    app:srcCompat="@color/common_google_signin_btn_text_dark_focused" />
+
+                <ProgressBar
+                    android:id="@+id/albumArtSpinner"
+                    style="?android:attr/progressBarStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="visible" />
+            </FrameLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -93,7 +106,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="center_vertical"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:visibility="gone">
 
             <ImageView
                 android:id="@+id/sadRobot"
@@ -121,6 +135,20 @@
                 android:textAlignment="center"
                 android:textSize="14sp" />
         </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/loadingRoomSpinnerLayout"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent">
+
+            <ProgressBar
+                android:id="@+id/loadingRoomSpinner"
+                style="?android:attr/progressBarStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_weight="1" />
+        </FrameLayout>
 
         <android.support.v7.widget.RecyclerView
             android:id="@+id/roomRecyclerView"

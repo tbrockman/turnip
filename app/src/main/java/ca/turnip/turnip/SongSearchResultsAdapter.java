@@ -57,19 +57,14 @@ public class SongSearchResultsAdapter
     @Override
     public void onBindViewHolder(@NonNull SongSearchResultsAdapter.SongViewHolder songViewHolder, int i) {
         // SongViewHolder.
-        int albumArtImageViewId = songViewHolder.albumArt.getId();
         Song song = suggestions.get(i);
 
         songViewHolder.songName.setText(song.getString("name"));
         songViewHolder.artist.setText(TextUtils.join(", ", song.getArtists()));
         try {
             if (!song.hasAlbumArt()) {
-                JSONObject album = song.get("album");
-                JSONArray albumImages = album.getJSONArray("images");
-                Log.i(TAG, albumImages.toString());
-                JSONObject imageInfoJSON = albumImages.getJSONObject(albumImages.length()-1);
-                String albumArtUrl = imageInfoJSON.getString("url");
-                if (cancelPotentialWork(albumArtImageViewId, songViewHolder.albumArt)) {
+                String albumArtUrl = song.getAlbumArtURL();
+                if (cancelPotentialWork(albumArtUrl, songViewHolder.albumArt)) {
                     RetrieveAlbumArtTask task = new RetrieveAlbumArtTask(song,
                                                                          albumArtUrl,
                                                                          songViewHolder.albumArt,
@@ -78,7 +73,7 @@ public class SongSearchResultsAdapter
                     final SongQueueAdapter.AsyncDrawable asyncDrawable =
                             new SongQueueAdapter.AsyncDrawable(context.getResources(), placeholder, task);
                     songViewHolder.albumArt.setImageDrawable(asyncDrawable);
-                    task.execute(songViewHolder.albumArt.getId());
+                    task.execute();
                 }
 
             }
