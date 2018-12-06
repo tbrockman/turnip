@@ -73,6 +73,7 @@ public class BackgroundService extends Service {
     // Network communication
 
     private final ArrayList<String> connectedClients = new ArrayList();
+    private final ArrayList<String> authenticatedClients = new ArrayList(); // TODO: password related
     private final ArrayList<Endpoint> discoveredHosts = new ArrayList();
     private final OkHttpClient okHttpClient = new OkHttpClient();
     private String serverEndpoint;
@@ -118,7 +119,9 @@ public class BackgroundService extends Service {
         }
 
         @Override
-        public void onSongTick() { notifySongTicked(); }
+        public void onSongTick(int timeElapsed) {
+            notifySongTicked(timeElapsed);
+        }
     };
 
     public class LocalBinder extends Binder {
@@ -231,9 +234,9 @@ public class BackgroundService extends Service {
         }
     }
 
-    private void notifySongTicked() {
+    private void notifySongTicked(int timeElapsed) {
         if (roomJukeboxListener != null) {
-            roomJukeboxListener.onSongTick();
+            roomJukeboxListener.onSongTick(timeElapsed);
         }
     }
 

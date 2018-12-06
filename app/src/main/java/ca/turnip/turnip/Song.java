@@ -15,7 +15,7 @@ public abstract class Song {
 
     protected Song(JSONObject jsonSong, String type) {
         try {
-            jsonSong.put("songType", "spotify");
+            jsonSong.put("songType", type);
         } catch (JSONException e) {
             e.printStackTrace();
         }

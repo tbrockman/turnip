@@ -43,13 +43,6 @@ class SpotifySong extends Song {
     // TODO: serialize album art bitmap
     public void setAlbumArt(Bitmap bitmap) {
         albumArt = bitmap;
-
-        try {
-            String encodedImage = bitmapToString(bitmap);
-            jsonSong.put("bitmap", encodedImage);
-        } catch (JSONException e) {
-            Log.e(TAG, e.toString());
-        }
     }
 
     @Override
@@ -61,34 +54,11 @@ class SpotifySong extends Song {
         }
     }
 
-    private String bitmapToString(Bitmap bitmap) {
-        String encodedImage;
-        ByteArrayOutputStream byteArrayBitmapStream = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100,
-                byteArrayBitmapStream);
-        byte[] b = byteArrayBitmapStream.toByteArray();
-        encodedImage = Base64.encodeToString(b, Base64.DEFAULT);
-        return encodedImage;
-    }
-
     public boolean hasAlbumArt() {
         return this.albumArt != null;
     }
 
     public Bitmap getAlbumArt() {
-
-        if (this.albumArt == null) {
-            String stringBitmap = getString("bitmap");
-
-            if (stringBitmap != null) {
-                byte[] decodedString = Base64.decode(getString("bitmap"), Base64.DEFAULT);
-                Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString,
-                        0,
-                        decodedString.length);
-                this.albumArt = decodedByte;
-            }
-        }
-
         return this.albumArt;
     }
 

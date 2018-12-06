@@ -6,5 +6,5 @@ interface JukeboxListener {
     void onSongRemoved(Song song);
     void onSongPaused(int timeElapsed);
     void onSongResumed(int timeElapsed);
-    void onSongTick();
+    void onSongTick(int timeElapsed);
 }

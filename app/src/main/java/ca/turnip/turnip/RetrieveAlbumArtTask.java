@@ -1,11 +1,11 @@
 package ca.turnip.turnip;
 
-import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.drawable.BitmapDrawable;
 import android.os.AsyncTask;
+import android.view.View;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,13 +19,23 @@ public class RetrieveAlbumArtTask extends AsyncTask<Integer, Void, Bitmap> {
     private Song song;
     private final String albumArtUrl;
     private final WeakReference<ImageView> albumArtImageViewReference;
+    private final WeakReference<ProgressBar> albumArtProgressBarReference;
 
     Integer resId = 0;
 
-    public RetrieveAlbumArtTask(Song song, String albumArtUrl, ImageView albumArt) {
+    public RetrieveAlbumArtTask(Song song, String albumArtUrl, ImageView albumArt, ProgressBar albumArtProgressBarReference) {
         this.song = song;
         this.albumArtUrl = albumArtUrl;
         this.albumArtImageViewReference = new WeakReference<>(albumArt);
+        this.albumArtProgressBarReference = new WeakReference<>(albumArtProgressBarReference);
+    }
+
+    @Override
+    protected void onPreExecute() {
+        final ImageView imageView = albumArtImageViewReference.get();
+        final ProgressBar progressBar = albumArtProgressBarReference.get();
+        imageView.setVisibility(View.INVISIBLE);
+        progressBar.setVisibility(View.VISIBLE);
     }
 
     @Override
@@ -49,10 +59,13 @@ public class RetrieveAlbumArtTask extends AsyncTask<Integer, Void, Bitmap> {
 
         if (albumArtImageViewReference != null && bitmap != null) {
             final ImageView imageView = albumArtImageViewReference.get();
+            final ProgressBar progressBar = albumArtProgressBarReference.get();
             final RetrieveAlbumArtTask retrieveAlbumArtTask = getRetrieveAlbumArtTask(imageView);
             if (this == retrieveAlbumArtTask && imageView != null) {
                 song.setAlbumArt(bitmap);
+                imageView.setVisibility(View.VISIBLE);
                 imageView.setImageBitmap(bitmap);
+                progressBar.setVisibility(View.INVISIBLE);
             }
         }
     }

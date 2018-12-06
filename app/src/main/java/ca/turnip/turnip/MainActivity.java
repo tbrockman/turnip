@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
                 ApplicationInfo.FLAG_DEBUGGABLE) != 0);
 
         if (isDebug) {
-            API_ENDPOINT = "http://192.168.0.10:3001";
+            API_ENDPOINT = "http://192.168.0.16:3001";
         }
         else {
             API_ENDPOINT = "http://turnip-webserver-prod.us-west-2.elasticbeanstalk.com";

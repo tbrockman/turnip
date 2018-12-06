@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
@@ -55,18 +56,9 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
 
     // Currently playing data
 
-    private int songLength; // in seconds
+    private int songLength = 0; // in seconds
     private int timeElapsed; // in seconds
     private Song currentlyPlaying;
-    private final Handler songTimerHandler = new Handler();
-    private final Runnable songTimer =  new Runnable() {
-        @Override
-        public void run() {
-            timeElapsed++;
-            renderCurrentlyPlayingProgress();
-            songTimerHandler.postDelayed(this, 1000);
-        }
-    };
 
     // Song queue data
 
@@ -106,33 +98,25 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
             @Override
             public void onSongPlaying(Song song) {
                 currentlyPlaying = song;
-                songTimerHandler.removeCallbacks(songTimer);
-                if (song.has("timeElapsed")) {
-                    try {
-                        timeElapsed = Integer.valueOf(song.getString("timeElapsed"));
-                    } catch(Exception e) {
-                        timeElapsed = 0;
-                    }
-                }
-                songLength = Integer.parseInt(song.getString("duration_ms")) / 1000;
-                songTimerHandler.postDelayed(songTimer, 1000);
+                timeElapsed = Integer.parseInt(currentlyPlaying.getString("timeElapsed"));
+                songLength = Integer.parseInt(currentlyPlaying.getString("duration_ms")) / 1000;
                 renderCurrentlyPlaying();
                 renderSongQueueEmpty();
             }
 
             @Override
-            public void onSongPaused(int timeElapsed) {
-                timeElapsed = timeElapsed;
+            public void onSongPaused(int time) {
+                timeElapsed = time;
             }
 
             @Override
-            public void onSongResumed(int timeElapsed) {
-                timeElapsed = timeElapsed;
+            public void onSongResumed(int time) {
+                timeElapsed = time;
             }
 
             @Override
-            public void onSongTick() {
-                timeElapsed++;
+            public void onSongTick(int time) {
+                timeElapsed = time;
                 renderCurrentlyPlayingProgress();
             }
 
@@ -179,8 +163,12 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
     }
 
     private void renderCurrentlyPlayingProgress() {
-        songTime.setText(secondsToString(timeElapsed));
-        timeProgressBar.setProgress((int) Math.ceil(timeElapsed * 100 / songLength));
+        if (timeElapsed >= 0) {
+            songTime.setText(secondsToString(timeElapsed));
+        }
+        if (songLength > 0) {
+            timeProgressBar.setProgress((int) Math.ceil(timeElapsed * 100 / songLength));
+        }
     }
 
     private void renderSongQueueEmpty() {
@@ -312,9 +300,10 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
         if (this.isHost) {
             Log.i(TAG, "Calling onDestroy here");
             backgroundService.stopAdvertising();
+        } else {
+            backgroundService.stopDiscovery();
         }
         Log.i(TAG, "calling RoomActivity on destroy now");
-        songTimerHandler.removeCallbacks(songTimer);
         backgroundService.unsubscribeRoomJukeboxListener();
         backgroundService.destroyRoom();
         unbindService(connection);
@@ -331,10 +320,12 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
                     if (data.hasExtra("song")) {
                         String jsonStringSong = data.getStringExtra("song");
                         String type = data.getStringExtra("type");
+                        Bitmap albumArt = data.getParcelableExtra("albumArt");
                         JSONObject jsonSong = new JSONObject(jsonStringSong);
 
                         if (type.equals("spotify")) {
                             song = new SpotifySong(jsonSong);
+                            song.setAlbumArt(albumArt);
                         }
 
                         if (song != null) {

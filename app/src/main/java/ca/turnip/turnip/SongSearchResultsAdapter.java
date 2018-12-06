@@ -11,6 +11,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import org.json.JSONArray;
@@ -70,8 +71,9 @@ public class SongSearchResultsAdapter
                 String albumArtUrl = imageInfoJSON.getString("url");
                 if (cancelPotentialWork(albumArtImageViewId, songViewHolder.albumArt)) {
                     RetrieveAlbumArtTask task = new RetrieveAlbumArtTask(song,
-                            albumArtUrl,
-                            songViewHolder.albumArt);
+                                                                         albumArtUrl,
+                                                                         songViewHolder.albumArt,
+                                                                         songViewHolder.progressBar);
                     Bitmap placeholder = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_logo_svg);
                     final SongQueueAdapter.AsyncDrawable asyncDrawable =
                             new SongQueueAdapter.AsyncDrawable(context.getResources(), placeholder, task);
@@ -82,6 +84,8 @@ public class SongSearchResultsAdapter
             }
             else {
                 songViewHolder.albumArt.setImageBitmap(song.getAlbumArt());
+                songViewHolder.albumArt.setVisibility(View.VISIBLE);
+                songViewHolder.progressBar.setVisibility(View.INVISIBLE);
             }
         } catch (JSONException e) {
             e.printStackTrace();
@@ -97,12 +101,14 @@ public class SongSearchResultsAdapter
         TextView songName;
         TextView artist;
         ImageView albumArt;
+        ProgressBar progressBar;
 
         public SongViewHolder(View itemView) {
             super(itemView);
             songName = (TextView) itemView.findViewById(R.id.songName);
             artist = (TextView) itemView.findViewById(R.id.artist);
             albumArt = (ImageView) itemView.findViewById(R.id.albumArt);
+            progressBar = (ProgressBar) itemView.findViewById(R.id.progressBar);
 
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override

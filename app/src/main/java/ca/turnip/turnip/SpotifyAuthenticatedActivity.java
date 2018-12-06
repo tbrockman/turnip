@@ -141,6 +141,7 @@ public class SpotifyAuthenticatedActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         final AuthenticationResponse response = AuthenticationClient.getResponse(resultCode, data);
+        Log.i(TAG, "code:" + String.valueOf(resultCode) + "data:" + data.toString());
 
         if (AUTH_TOKEN_REQUEST_CODE == requestCode) {
             spotifyAccessToken = response.getAccessToken();

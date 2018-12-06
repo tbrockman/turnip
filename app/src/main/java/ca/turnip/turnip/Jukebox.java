@@ -1,13 +1,29 @@
 package ca.turnip.turnip;
 
+import android.os.Handler;
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 
 public class Jukebox {
+
+    private static final String TAG = Jukebox.class.getSimpleName();
+
     // Songs
     private final ArrayList<Song> songQueue;
 
+    private int timeElapsed;
     private JukeboxListener jukeboxListener;
+    private final Handler songTimerHandler = new Handler();
+    private final Runnable songTimer =  new Runnable() {
+        @Override
+        public void run() {
+            timeElapsed++;
+            jukeboxListener.onSongTick(timeElapsed);
+            songTimerHandler.postDelayed(this, 1000);
+        }
+    };
 
     private Song currentlyPlaying;
 
@@ -42,8 +58,18 @@ public class Jukebox {
                 break;
             }
         }
+
         currentlyPlaying = song;
-        jukeboxListener.onSongPlaying(song);
+
+        if (currentlyPlaying.has("timeElapsed")) {
+            setTimeElapsed(Integer.parseInt(currentlyPlaying.getString("timeElapsed")));
+        }
+        else {
+            setTimeElapsed(0);
+        }
+        jukeboxListener.onSongPlaying(currentlyPlaying);
+        songTimerHandler.removeCallbacks(songTimer);
+        songTimerHandler.postDelayed(songTimer, 1000);
     }
 
     public ArrayList<Song> getSongQueue() { return this.songQueue; }
@@ -56,11 +82,17 @@ public class Jukebox {
 
     public void turnOff() {
         songQueue.clear();
+        songTimerHandler.removeCallbacks(songTimer);
         jukeboxListener = null;
+    }
+
+    public int getTimeElapsed() {
+        return this.timeElapsed;
     }
 
     public void setTimeElapsed(int timeElapsed) {
         if (this.currentlyPlaying != null) {
+            this.timeElapsed = timeElapsed;
             this.currentlyPlaying.setTimeElapsed(timeElapsed);
         }
     }
