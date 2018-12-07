@@ -46,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
             API_ENDPOINT = "http://192.168.0.16:3001";
         }
         else {
-            API_ENDPOINT = "http://turnip-webserver-prod.us-west-2.elasticbeanstalk.com";
+            API_ENDPOINT = "https://api.turnipapp.com/";
         }
 
         startService(new Intent(this, BackgroundService.class));

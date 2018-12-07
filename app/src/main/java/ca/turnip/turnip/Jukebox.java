@@ -33,6 +33,9 @@ public class Jukebox {
     }
 
     public Song getCurrentlyPlaying() {
+        if (this.currentlyPlaying != null) {
+            this.currentlyPlaying.setTimeElapsed(timeElapsed);
+        }
         return this.currentlyPlaying;
     }
 
@@ -60,7 +63,6 @@ public class Jukebox {
         }
 
         currentlyPlaying = song;
-
         if (currentlyPlaying.has("timeElapsed")) {
             setTimeElapsed(Integer.parseInt(currentlyPlaying.getString("timeElapsed")));
         }
