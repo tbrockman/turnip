@@ -26,6 +26,7 @@ public class HostActivity extends SpotifyAuthenticatedActivity {
     public static final int AUTH_TOKEN_REQUEST_CODE = 0x10;
     public static final int AUTH_CODE_REQUEST_CODE = 0x11;
 
+    private Boolean spotifyIsChecked = false;
     private Boolean spotifyEnabled = false;
     private int spotifyExpiresIn;
     private String spotifyAccessToken;
@@ -54,6 +55,12 @@ public class HostActivity extends SpotifyAuthenticatedActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         unbindConnectionService();
@@ -62,6 +69,16 @@ public class HostActivity extends SpotifyAuthenticatedActivity {
     private void initializeStartButton() {
         startButton = findViewById(R.id.startButton);
         disableButton(startButton);
+    }
+
+    private void allowSubmit() {
+        String text = roomName.getText().toString();
+        if (text.length() > 0 && spotifyIsChecked) {
+            enableButton(startButton);
+        }
+        else {
+            disableButton(startButton);
+        }
     }
 
     public void disableButton(Button button) {
@@ -82,12 +99,7 @@ public class HostActivity extends SpotifyAuthenticatedActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (before == 0 && s.length() > 0) {
-                    enableButton(startButton);
-                }
-                else if (before > 0 && s.length() == 0) {
-                    disableButton(startButton);
-                }
+                allowSubmit();
             }
 
             @Override
@@ -120,10 +132,14 @@ public class HostActivity extends SpotifyAuthenticatedActivity {
         new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
                 if (isChecked) {
                     // TODO: only authenticate if we fail to get a new access using stored refresh token
                     authenticateSpotify();
                 }
+
+                spotifyIsChecked = isChecked;
+                allowSubmit();
             }
     };
 

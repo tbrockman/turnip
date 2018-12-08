@@ -167,9 +167,9 @@
         android:layout_margin="16dp"
         android:scaleType="center"
         android:src="@drawable/ic_outline_add_24px"
-        android:tint="#ffffff"
+        android:tint="@color/white"
         android:visibility="visible"
-        app:backgroundTint="@color/colorButtonBackgroundPrimary"
+        app:backgroundTint="@color/colorPrimary"
         app:borderWidth="0dp"
         app:fabSize="normal"
         app:srcCompat="@drawable/ic_outline_add_24px" />

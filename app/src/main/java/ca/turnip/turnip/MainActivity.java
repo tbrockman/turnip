@@ -42,11 +42,11 @@ public class MainActivity extends AppCompatActivity {
         boolean isDebug = ((this.getApplicationInfo().flags &
                 ApplicationInfo.FLAG_DEBUGGABLE) != 0);
 
-        if (isDebug) {
-            API_ENDPOINT = "http://192.168.0.16:3001";
+        if (false && isDebug) {
+            API_ENDPOINT = "http://192.168.0.17:3001";
         }
         else {
-            API_ENDPOINT = "https://api.turnipapp.com/";
+            API_ENDPOINT = "https://api.turnipapp.com";
         }
 
         startService(new Intent(this, BackgroundService.class));

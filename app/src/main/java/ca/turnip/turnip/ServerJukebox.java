@@ -23,6 +23,7 @@ class ServerJukebox extends Jukebox {
     private SpotifyAppRemote spotifyAppRemote;
     private boolean spotifyIsConnected = false;
     private boolean lock = false;
+    private boolean wasPaused = false;
     private CallResult.ResultCallback<Empty> playCallback = new CallResult.ResultCallback<Empty>() {
         @Override
         public void onResult(Empty empty) {
@@ -65,6 +66,15 @@ class ServerJukebox extends Jukebox {
                                                          // whether the action we sent to spotify
                                                          // app remote finished
                                             playNextSong();
+                                        }
+                                        else {
+                                            if (playerState.isPaused && !wasPaused) {
+                                                wasPaused = true;
+                                                pauseCurrent(Math.round(playerState.playbackPosition / 1000));
+                                            } else if (!playerState.isPaused && wasPaused) {
+                                                wasPaused = false;
+                                                unpauseCurrent(Math.round(playerState.playbackPosition / 1000));
+                                            }
                                         }
                                     }
                                 })

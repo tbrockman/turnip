@@ -49,7 +49,9 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
     private RecyclerView recyclerView;
     private SongQueueAdapter adapter;
     private FrameLayout loadingRoomSpinnerLayout;
+
     // Currently playing
+
     private AppCompatImageView skipButton;
     private TextView artist;
     private TextView songName;
@@ -225,9 +227,12 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
                                                                              albumArtUrl,
                                                                              albumArt,
                                                                              albumArtSpinner);
-                        Bitmap placeholder = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_logo_svg);
+                        Bitmap placeholder = BitmapFactory.decodeResource(context.getResources(),
+                                                                          R.drawable.ic_logo_svg);
                         final SongQueueAdapter.AsyncDrawable asyncDrawable =
-                                new SongQueueAdapter.AsyncDrawable(context.getResources(), placeholder, task);
+                                new SongQueueAdapter.AsyncDrawable(context.getResources(),
+                                                                   placeholder,
+                                                                   task);
                         albumArt.setImageDrawable(asyncDrawable);
                         task.execute();
                     }

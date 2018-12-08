@@ -13,6 +13,8 @@ public class Jukebox {
     // Songs
     private final ArrayList<Song> songQueue;
 
+    // Time
+    private boolean isPlaying;
     private int timeElapsed;
     private JukeboxListener jukeboxListener;
     private final Handler songTimerHandler = new Handler();
@@ -71,7 +73,7 @@ public class Jukebox {
         }
         jukeboxListener.onSongPlaying(currentlyPlaying);
         songTimerHandler.removeCallbacks(songTimer);
-        songTimerHandler.postDelayed(songTimer, 1000);
+        startTimer();
     }
 
     public ArrayList<Song> getSongQueue() { return this.songQueue; }
@@ -98,4 +100,28 @@ public class Jukebox {
             this.currentlyPlaying.setTimeElapsed(timeElapsed);
         }
     }
+
+    public void pauseCurrent(int timeElapsed) {
+        setTimeElapsed(timeElapsed);
+        pauseTimer();
+
+    }
+
+    public void unpauseCurrent(int timeElapsed) {
+        setTimeElapsed(timeElapsed);
+        startTimer();
+    }
+
+    private void startTimer() {
+        if (!isPlaying) {
+            isPlaying = true;
+            songTimerHandler.postDelayed(songTimer, 1000);
+        }
+    }
+
+    private void pauseTimer() {
+        isPlaying = false;
+        songTimerHandler.removeCallbacks(songTimer);
+    }
+
 }

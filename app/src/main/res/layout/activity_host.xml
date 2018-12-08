@@ -42,7 +42,10 @@
                     <android.support.design.widget.TextInputEditText
                         android:id="@+id/roomName"
                         android:layout_width="fill_parent"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:maxLines="1"
+                        android:inputType="text"
+                        android:imeOptions="actionNext" />
                 </android.support.design.widget.TextInputLayout>
 
             </TableRow>

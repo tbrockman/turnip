@@ -10,6 +10,8 @@ import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.View;
+import android.widget.ProgressBar;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -20,6 +22,10 @@ public class RoomListActivity extends AppCompatActivity {
 
     private BackgroundService backgroundService;
 
+    // ProgressBar
+
+    private ProgressBar findingRoomsProgressBar;
+
     // RecyclerView
 
     private RecyclerView recyclerView;
@@ -28,10 +34,12 @@ public class RoomListActivity extends AppCompatActivity {
     private ArrayList<BackgroundService.Endpoint> rooms = new ArrayList<>();;
 
     // RoomActivity list listener
+
     private RoomListListener roomListListener =
             new RoomListListener() {
         @Override
         public void onRoomFound(BackgroundService.Endpoint host) {
+            findingRoomsProgressBar.setVisibility(View.VISIBLE);
             rooms.add(host);
             adapter.notifyItemInserted(rooms.size() - 1);
         }
@@ -39,6 +47,9 @@ public class RoomListActivity extends AppCompatActivity {
         @Override
         public void onRoomLost(String endpointId) {
             Iterator<BackgroundService.Endpoint> it = rooms.iterator();
+            if (rooms.size() == 0) {
+                findingRoomsProgressBar.setVisibility(View.INVISIBLE);
+            }
             Log.i(TAG, "room lost: " + endpointId);
             while (it.hasNext()) {
                 BackgroundService.Endpoint current = it.next();
@@ -70,10 +81,10 @@ public class RoomListActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.i(TAG, "RoomActivity list on created");
         setContentView(R.layout.activity_room_list);
         bindConnectionService();
 
+        findingRoomsProgressBar = findViewById(R.id.findingRoomsProgressBar);
         recyclerView =  findViewById(R.id.roomRecyclerView);
         layoutManager = new LinearLayoutManager(this);
         adapter = new RoomListAdapter(rooms);
@@ -85,21 +96,13 @@ public class RoomListActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        Log.i(TAG, "RoomActivity list on resume.");
         if (backgroundService != null) {
             rooms = backgroundService.getDiscoveredHosts();
-            Log.i(TAG, "not null" + rooms.toString());
             adapter.notifyDataSetChanged();
             if (!backgroundService.isDiscovering()) {
-                Log.i(TAG, "starting discovery again");
                 backgroundService.startDiscovery();
             }
         }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
     }
 
     @Override

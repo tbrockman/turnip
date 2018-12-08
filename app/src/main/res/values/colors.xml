@@ -9,4 +9,5 @@
     <color name="colorButtonBackgroundPrimary">#673ab7</color>
     <color name="colorButtonTextPrimary">#efebe9</color>
     <color name="spotifyGreen">#1DB954</color>
+    <color name="addSongGreen">#2eb454</color>
 </resources>
