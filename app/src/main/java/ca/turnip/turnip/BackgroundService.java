@@ -661,7 +661,7 @@ public class BackgroundService extends Service {
     public void searchSpotifyAPI(String search, String type, Callback callback) {
         final Request request =
                 new Request.Builder()
-                           .url("https://api.spotify.com/v1/search?q=" + search + "&type=" + type)
+                           .url("https://api.spotify.com/v1/search?q=" + search + "*&type=" + type)
                            .addHeader("Authorization", "Bearer " + spotifyAccessToken)
                            .addHeader("Accept", "application/json")
                            .build();

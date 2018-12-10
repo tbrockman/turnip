@@ -73,6 +73,7 @@ public class Jukebox {
         }
         jukeboxListener.onSongPlaying(currentlyPlaying);
         songTimerHandler.removeCallbacks(songTimer);
+        resetTimer();
         startTimer();
     }
 
@@ -123,5 +124,7 @@ public class Jukebox {
         isPlaying = false;
         songTimerHandler.removeCallbacks(songTimer);
     }
+
+    private void resetTimer() { pauseTimer(); }
 
 }

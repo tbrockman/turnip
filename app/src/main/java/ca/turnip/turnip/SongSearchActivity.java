@@ -6,16 +6,23 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
+import android.speech.RecognizerIntent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
+import android.widget.TextView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -23,6 +30,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -33,17 +41,16 @@ import okhttp3.Response;
 public class SongSearchActivity extends AppCompatActivity {
 
     private static final String TAG = SongSearchActivity.class.getSimpleName();
+    private static final int SPEECH_REQUEST_CODE = 0;
     private Context context = this;
 
     // UI
 
-    private LayoutInflater inflater;
     private RecyclerView.LayoutManager songSearchLayoutManager;
     private RecyclerView songSearchResultsRecyclerView;
-    private SearchView searchView;
+    private EditText searchEditText;
     private SongSearchResultsAdapter songSearchResultsAdapter;
     private Toolbar toolbar;
-
 
     // Search results
 
@@ -89,56 +96,58 @@ public class SongSearchActivity extends AppCompatActivity {
         toolbar = findViewById(R.id.searchToolbar);
 
         if (toolbar != null) {
+            searchEditText = (EditText) toolbar.findViewById(R.id.searchEditText);
+            // Search text changed
+            searchEditText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+
+                @Override
+                public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                    final String search = charSequence.toString();
+
+                    if (charSequence.length() > 0) {
+                        if (searchTask != null) {
+                            searchTask.cancel();
+
+                        }
+                        searchTask = new TimerTask() {
+                            @Override
+                            public void run() {
+                                searchSpotify(search);
+                            }
+                        };
+                        searchTimer.schedule(searchTask, searchDelay);
+                    }
+                }
+
+                @Override
+                public void afterTextChanged(Editable editable) {
+
+                }
+            });
+            // Search text submit
+            searchEditText.setOnEditorActionListener(new EditText.OnEditorActionListener() {
+                @Override
+                public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                    if (actionId == EditorInfo.IME_ACTION_DONE) {
+                        String search = searchEditText.getText().toString();
+                        searchSpotify(search);
+                    }
+                    return true;
+                }
+            });
+
             setSupportActionBar(toolbar);
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setDisplayShowHomeEnabled(true);
-            toolbar.inflateMenu(R.menu.search_activity_menu);
+            toolbar.inflateMenu(R.menu.spotify_search_menu);
         }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate( R.menu.search_activity_menu, menu);
-
-        MenuItem searchItem = menu.findItem(R.id.search_bar);
-        searchView = (SearchView) searchItem.getActionView();
-        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
-        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
-        searchView.setIconified(false);
-        searchView.setMaxWidth( Integer.MAX_VALUE );
-        searchView.setOnQueryTextListener(
-            new SearchView.OnQueryTextListener() {
-                @Override
-                public boolean onQueryTextSubmit(String s) {
-                    backgroundService.searchSpotifyAPI(s,
-                            "track",
-                            spotifySearchCallback);
-                    return true;
-                }
-
-                @Override
-                public boolean onQueryTextChange(final String s) {
-
-                    if (searchTask != null) {
-                        searchTask.cancel();
-
-                    }
-                    searchTask = new TimerTask() {
-                        @Override
-                        public void run() {
-                            if (s.length() > 0) {
-                                backgroundService.searchSpotifyAPI(s,
-                                        "track",
-                                        spotifySearchCallback);
-                            }
-                        }
-                    };
-                    searchTimer.schedule(searchTask, searchDelay);
-                    return true;
-                }
-            }
-        );
-
+        getMenuInflater().inflate( R.menu.spotify_search_menu, menu);
         return super.onCreateOptionsMenu(menu);
     }
 
@@ -149,17 +158,24 @@ public class SongSearchActivity extends AppCompatActivity {
             case android.R.id.home:
                 finish();
                 return true;
+            case R.id.action_voice_search:
+                displaySpeechRecognizer();
+                return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
     @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
-            String query = intent.getStringExtra(SearchManager.QUERY);
-            searchView.setQuery(String.valueOf(query), false);
+    protected void onActivityResult(int requestCode, int resultCode,
+                                    Intent data) {
+        if (requestCode == SPEECH_REQUEST_CODE && resultCode == RESULT_OK) {
+            List<String> results = data.getStringArrayListExtra(
+                    RecognizerIntent.EXTRA_RESULTS);
+            String spokenText = results.get(0);
+            searchEditText.setText(spokenText);
+            searchSpotify(spokenText);
         }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
@@ -168,7 +184,16 @@ public class SongSearchActivity extends AppCompatActivity {
         unbindService(connection);
     }
 
-    // Process intents
+    private void searchSpotify(String search) {
+        backgroundService.searchSpotifyAPI(search, "track", spotifySearchCallback);
+    }
+
+    private void displaySpeechRecognizer() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        startActivityForResult(intent, SPEECH_REQUEST_CODE);
+    }
 
     // Search result click listener
 

@@ -132,9 +132,7 @@ public class HostActivity extends SpotifyAuthenticatedActivity {
         new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
                 if (isChecked) {
-                    // TODO: only authenticate if we fail to get a new access using stored refresh token
                     authenticateSpotify();
                 }
 

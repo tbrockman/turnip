@@ -73,7 +73,7 @@
             android:id="@+id/addSongPlus"
             android:layout_width="25dp"
             android:layout_height="match_parent"
-            android:tint="@color/colorPrimaryLight"
+            android:tint="@color/spotifyGreen"
             android:src="@drawable/ic_outline_add_24px" />
     </LinearLayout>
 </android.support.constraint.ConstraintLayout>

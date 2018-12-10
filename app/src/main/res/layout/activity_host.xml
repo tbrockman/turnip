@@ -45,7 +45,7 @@
                         android:layout_height="wrap_content"
                         android:maxLines="1"
                         android:inputType="text"
-                        android:imeOptions="actionNext" />
+                        android:imeOptions="actionDone" />
                 </android.support.design.widget.TextInputLayout>
 
             </TableRow>

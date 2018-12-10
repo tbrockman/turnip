@@ -70,9 +70,11 @@ class ServerJukebox extends Jukebox {
                                         else {
                                             if (playerState.isPaused && !wasPaused) {
                                                 wasPaused = true;
+                                                Log.i(TAG, "pausing:");
                                                 pauseCurrent(Math.round(playerState.playbackPosition / 1000));
                                             } else if (!playerState.isPaused && wasPaused) {
                                                 wasPaused = false;
+                                                Log.i(TAG, "unpausing");
                                                 unpauseCurrent(Math.round(playerState.playbackPosition / 1000));
                                             }
                                         }

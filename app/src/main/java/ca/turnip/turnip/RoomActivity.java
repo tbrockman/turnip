@@ -199,6 +199,13 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
         }
     }
 
+    @Override
+    public void onBackPressed () {
+        // TODO: display toast confirming navigation away
+        Log.i(TAG, "caught back pressed");
+        super.onBackPressed();
+    }
+
     // Currently playing
 
     private void renderCurrentlyPlaying() {

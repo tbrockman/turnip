@@ -39,7 +39,7 @@ public class RoomListActivity extends AppCompatActivity {
             new RoomListListener() {
         @Override
         public void onRoomFound(BackgroundService.Endpoint host) {
-            findingRoomsProgressBar.setVisibility(View.VISIBLE);
+            findingRoomsProgressBar.setVisibility(View.INVISIBLE);
             rooms.add(host);
             adapter.notifyItemInserted(rooms.size() - 1);
         }
@@ -48,7 +48,7 @@ public class RoomListActivity extends AppCompatActivity {
         public void onRoomLost(String endpointId) {
             Iterator<BackgroundService.Endpoint> it = rooms.iterator();
             if (rooms.size() == 0) {
-                findingRoomsProgressBar.setVisibility(View.INVISIBLE);
+                findingRoomsProgressBar.setVisibility(View.VISIBLE);
             }
             Log.i(TAG, "room lost: " + endpointId);
             while (it.hasNext()) {
