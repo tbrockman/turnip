@@ -65,7 +65,8 @@ public class SongQueueAdapter extends RecyclerView.Adapter<SongQueueAdapter.Song
                                                                          albumArtUrl,
                                                                          songViewHolder.albumArt,
                                                                          songViewHolder.progressBar);
-                    Bitmap placeholder = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_logo_svg);
+                    Bitmap placeholder = BitmapFactory.decodeResource(context.getResources(),
+                                                                      R.drawable.ic_turnip_icon);
                     final AsyncDrawable asyncDrawable =
                             new AsyncDrawable(context.getResources(), placeholder, task);
                     songViewHolder.albumArt.setImageDrawable(asyncDrawable);

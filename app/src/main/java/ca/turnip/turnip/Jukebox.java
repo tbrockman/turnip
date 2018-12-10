@@ -22,7 +22,9 @@ public class Jukebox {
         @Override
         public void run() {
             timeElapsed++;
-            jukeboxListener.onSongTick(timeElapsed);
+            if (jukeboxListener != null) {
+                jukeboxListener.onSongTick(timeElapsed);
+            }
             songTimerHandler.postDelayed(this, 1000);
         }
     };

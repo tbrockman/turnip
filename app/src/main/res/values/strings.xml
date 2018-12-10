@@ -18,4 +18,8 @@
     <string name="search_title">Search</string>
     <string name="search_hint">Search songs</string>
     <string name="join_button_text">Join</string>
+    <string name="leave_room_title">Leave room</string>
+    <string name="leave_room_text_user">Are you sure you want to leave the room?</string>
+    <string name="leave_room_text_host">Are you sure you want to leave the room?\n\nLeaving will close the room and all connected participants will be removed.</string>
+    <string name="leave_room_positive">Leave</string>
 </resources>

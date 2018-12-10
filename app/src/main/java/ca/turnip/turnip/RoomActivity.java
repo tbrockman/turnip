@@ -1,5 +1,6 @@
 package ca.turnip.turnip;
 
+import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -17,6 +18,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -42,6 +44,7 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
 
     // UI elements
 
+    private AlertDialog dialog;
     private FloatingActionButton fab;
     private LinearLayoutManager layoutManager;
     private LinearLayout noSongsContainer;
@@ -188,6 +191,8 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
                 }
             });
 
+            createLeaveRoomConfirmationDialog();
+
             songQueue = new ArrayList();
             layoutManager = new LinearLayoutManager(this);
             adapter = new SongQueueAdapter(songQueue, this);
@@ -200,10 +205,95 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
     }
 
     @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case android.R.id.home:
+                onBackPressed();
+                break;
+        }
+        return true;
+    }
+
+    @Override
     public void onBackPressed () {
         // TODO: display toast confirming navigation away
-        Log.i(TAG, "caught back pressed");
-        super.onBackPressed();
+        dialog.show();
+
+    }
+
+
+    @Override
+    public void onDestroy() {
+        if (this.isHost) {
+            Log.i(TAG, "Calling onDestroy here");
+            backgroundService.stopAdvertising();
+        }
+        Log.i(TAG, "calling RoomActivity on destroy now");
+        backgroundService.unsubscribeRoomJukeboxListener();
+        backgroundService.destroyRoom();
+        unbindService(connection);
+        super.onDestroy();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == ADD_SONG_REQUEST) {
+            if (resultCode == RESULT_OK) {
+                try {
+                    Song song = null;
+
+                    if (data.hasExtra("song")) {
+                        String jsonStringSong = data.getStringExtra("song");
+                        String type = data.getStringExtra("type");
+                        Bitmap albumArt = data.getParcelableExtra("albumArt");
+                        JSONObject jsonSong = new JSONObject(jsonStringSong);
+
+                        if (type.equals("spotify")) {
+                            song = new SpotifySong(jsonSong);
+                            song.setAlbumArt(albumArt);
+                        }
+
+                        if (song != null) {
+                            if (isHost) {
+                                // Add to local song queue and emit to all clients
+                                backgroundService.enqueueSong(song);
+                            }
+                            else {
+                                // Send to server
+                                backgroundService.addSong(song);
+                            }
+                        }
+                    }
+                } catch (JSONException e) {
+                    Log.e(TAG, "Error converting JSON string to JSON.");
+                }
+            }
+        }
+    }
+
+    // Confirm leave room dialog
+
+    private void createLeaveRoomConfirmationDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setPositiveButton(R.string.leave_room_positive, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User clicked Leave button
+                RoomActivity.super.onBackPressed();
+            }
+        });
+        builder.setNegativeButton(R.string.cancel_button_text, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User clicked Cancel button
+            }
+        });
+        builder.setTitle(R.string.leave_room_title);
+        if (isHost) {
+            builder.setMessage(R.string.leave_room_text_host);
+        }
+        else {
+            builder.setMessage(R.string.leave_room_text_user);
+        }
+        dialog = builder.create();
     }
 
     // Currently playing
@@ -235,7 +325,7 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
                                                                              albumArt,
                                                                              albumArtSpinner);
                         Bitmap placeholder = BitmapFactory.decodeResource(context.getResources(),
-                                                                          R.drawable.ic_logo_svg);
+                                                                          R.drawable.ic_turnip_icon);
                         final SongQueueAdapter.AsyncDrawable asyncDrawable =
                                 new SongQueueAdapter.AsyncDrawable(context.getResources(),
                                                                    placeholder,
@@ -312,7 +402,6 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
 
             @Override
             public void onServiceDisconnected(ComponentName name) {
-                Log.i(TAG, "disconnected from service");
                 backgroundService = null;
             }
         };
@@ -343,55 +432,6 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
         timeProgressBar = findViewById(R.id.timeElapsed);
         albumArtSpinner = findViewById(R.id.albumArtSpinner);
         loadingRoomSpinnerLayout = findViewById(R.id.loadingRoomSpinnerLayout);
-    }
-
-    @Override
-    public void onDestroy() {
-        if (this.isHost) {
-            Log.i(TAG, "Calling onDestroy here");
-            backgroundService.stopAdvertising();
-        }
-        Log.i(TAG, "calling RoomActivity on destroy now");
-        backgroundService.unsubscribeRoomJukeboxListener();
-        backgroundService.destroyRoom();
-        unbindService(connection);
-        super.onDestroy();
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == ADD_SONG_REQUEST) {
-            if (resultCode == RESULT_OK) {
-                try {
-                    Song song = null;
-
-                    if (data.hasExtra("song")) {
-                        String jsonStringSong = data.getStringExtra("song");
-                        String type = data.getStringExtra("type");
-                        Bitmap albumArt = data.getParcelableExtra("albumArt");
-                        JSONObject jsonSong = new JSONObject(jsonStringSong);
-
-                        if (type.equals("spotify")) {
-                            song = new SpotifySong(jsonSong);
-                            song.setAlbumArt(albumArt);
-                        }
-
-                        if (song != null) {
-                            if (isHost) {
-                                // Add to local song queue and emit to all clients
-                                backgroundService.enqueueSong(song);
-                            }
-                            else {
-                                // Send to server
-                                backgroundService.addSong(song);
-                            }
-                        }
-                    }
-                } catch (JSONException e) {
-                    Log.e(TAG, "Error converting JSON string to JSON.");
-                }
-            }
-        }
     }
 
     @Override

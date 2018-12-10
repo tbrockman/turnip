@@ -56,9 +56,8 @@ public class SongSearchResultsAdapter
 
     @Override
     public void onBindViewHolder(@NonNull SongSearchResultsAdapter.SongViewHolder songViewHolder, int i) {
-        // SongViewHolder.
         Song song = suggestions.get(i);
-
+        // SongViewHolder.
         songViewHolder.songName.setText(song.getString("name"));
         songViewHolder.artist.setText(TextUtils.join(", ", song.getArtists()));
         try {
@@ -69,7 +68,8 @@ public class SongSearchResultsAdapter
                                                                          albumArtUrl,
                                                                          songViewHolder.albumArt,
                                                                          songViewHolder.progressBar);
-                    Bitmap placeholder = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_logo_svg);
+                    Bitmap placeholder = BitmapFactory.decodeResource(context.getResources(),
+                                                                      R.drawable.ic_turnip_icon);
                     final SongQueueAdapter.AsyncDrawable asyncDrawable =
                             new SongQueueAdapter.AsyncDrawable(context.getResources(), placeholder, task);
                     songViewHolder.albumArt.setImageDrawable(asyncDrawable);
