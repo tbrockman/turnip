@@ -204,7 +204,6 @@ public class SongSearchActivity extends AppCompatActivity {
             //Song result = songs.get(pos);
             data.putExtra("song", result.toString());
             data.putExtra("type", "spotify");
-            data.putExtra("albumArt", result.getAlbumArt());
             setResult(RESULT_OK, data);
             finish();
         }

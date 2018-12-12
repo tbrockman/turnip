@@ -28,6 +28,7 @@
                 android:id="@+id/albumArt"
                 android:layout_width="60dp"
                 android:layout_height="match_parent"
+                android:contentDescription="@string/album_art_content_description"
                 android:visibility="invisible"
                 app:srcCompat="@color/common_google_signin_btn_text_dark_focused" />
 
@@ -40,7 +41,7 @@
         </FrameLayout>
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_marginStart="10dp"
             android:layout_marginEnd="20dp"
@@ -55,9 +56,9 @@
                 android:ellipsize="end"
                 android:fontFamily="sans-serif"
                 android:singleLine="true"
-                android:text="TextView"
                 android:textColor="@color/colorButtonTextPrimary"
-                android:textSize="20sp" />
+                android:textSize="20sp"
+                tools:text="Test" />
 
             <TextView
                 android:id="@+id/artist"
@@ -65,15 +66,16 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:singleLine="true"
-                android:text="TextView"
-                android:textSize="12sp" />
+                android:textSize="12sp"
+                tools:text="Test" />
         </LinearLayout>
 
         <android.support.v7.widget.AppCompatImageView
             android:id="@+id/addSongPlus"
-            android:layout_width="25dp"
+            android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:tint="@color/spotifyGreen"
-            android:src="@drawable/ic_outline_add_24px" />
+            android:paddingEnd="2dp"
+            android:src="@drawable/ic_outline_add_24px"
+            android:tint="@color/spotifyGreen" />
     </LinearLayout>
 </android.support.constraint.ConstraintLayout>

@@ -17,6 +17,9 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.squareup.picasso.Callback;
+import com.squareup.picasso.Picasso;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -51,34 +54,29 @@ public class SongQueueAdapter extends RecyclerView.Adapter<SongQueueAdapter.Song
     }
 
     @Override
-    public void onBindViewHolder(@NonNull SongQueueAdapter.SongViewHolder songViewHolder, int i) {
+    public void onBindViewHolder(@NonNull final SongQueueAdapter.SongViewHolder songViewHolder, int i) {
         // SongViewHolder.
         Song song = songQueue.get(i);
 
         songViewHolder.songName.setText(song.getString("name"));
         songViewHolder.artist.setText(TextUtils.join(", ", song.getArtists()));
         try {
-            if (!song.hasAlbumArt()) {
-                String albumArtUrl = song.getAlbumArtURL();
-                if (cancelPotentialWork(albumArtUrl, songViewHolder.albumArt)) {
-                    RetrieveAlbumArtTask task = new RetrieveAlbumArtTask(song,
-                                                                         albumArtUrl,
-                                                                         songViewHolder.albumArt,
-                                                                         songViewHolder.progressBar);
-                    Bitmap placeholder = BitmapFactory.decodeResource(context.getResources(),
-                                                                      R.drawable.ic_turnip_icon);
-                    final AsyncDrawable asyncDrawable =
-                            new AsyncDrawable(context.getResources(), placeholder, task);
-                    songViewHolder.albumArt.setImageDrawable(asyncDrawable);
-                    task.execute();
+            String albumArtUrl = song.getAlbumArtURL();
+            songViewHolder.progressBar.setVisibility(View.VISIBLE);
+            songViewHolder.albumArt.setVisibility(View.INVISIBLE);
+            Picasso.get().load(albumArtUrl).into(songViewHolder.albumArt, new Callback() {
+
+                @Override
+                public void onSuccess() {
+                    songViewHolder.albumArt.setVisibility(View.VISIBLE);
+                    songViewHolder.progressBar.setVisibility(View.INVISIBLE);
                 }
 
-            }
-            else {
-                songViewHolder.albumArt.setImageBitmap(song.getAlbumArt());
-                songViewHolder.albumArt.setVisibility(View.VISIBLE);
-                songViewHolder.progressBar.setVisibility(View.INVISIBLE);
-            }
+                @Override
+                public void onError(Exception e) {
+
+                }
+            });
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -115,46 +113,6 @@ public class SongQueueAdapter extends RecyclerView.Adapter<SongQueueAdapter.Song
 
             plusSign.setVisibility(View.INVISIBLE);
         }
-    }
-
-    static class AsyncDrawable extends BitmapDrawable {
-        private final WeakReference<RetrieveAlbumArtTask> retrieveAlbumArtTaskReference;
-
-        public AsyncDrawable(Resources res, Bitmap bitmap,
-                             RetrieveAlbumArtTask retrieveAlbumArtTask) {
-            super(res, bitmap);
-            retrieveAlbumArtTaskReference =
-                    new WeakReference<RetrieveAlbumArtTask>(retrieveAlbumArtTask);
-        }
-
-        public RetrieveAlbumArtTask getRetrieveAlbumArtTask() {
-            return retrieveAlbumArtTaskReference.get();
-        }
-    }
-
-    static boolean cancelPotentialWork(String url, ImageView imageView) {
-        final RetrieveAlbumArtTask retrieveAlbumArtTask = getRetrieveAlbumArtTask(imageView);
-        if (retrieveAlbumArtTask != null) {
-            final String albumArtUrl = retrieveAlbumArtTask.albumArtUrl;
-            if ((albumArtUrl == null) || (!albumArtUrl.equals(url))) {
-                retrieveAlbumArtTask.cancel(true);
-            }
-            else {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    static RetrieveAlbumArtTask getRetrieveAlbumArtTask(ImageView imageView) {
-        if (imageView != null) {
-            final Drawable drawable = imageView.getDrawable();
-            if (drawable instanceof AsyncDrawable) {
-                final AsyncDrawable asyncDrawable = (AsyncDrawable) drawable;
-                return asyncDrawable.getRetrieveAlbumArtTask();
-            }
-        }
-        return null;
     }
 }
 

@@ -26,10 +26,7 @@ public abstract class Song {
     abstract String getString(String key);
     abstract boolean has(String key);
     abstract JSONArray getArray(String key);
-    abstract boolean hasAlbumArt();
-    abstract void setAlbumArt(Bitmap bitmap);
     abstract void setTimeElapsed(int timeElapsed);
-    abstract Bitmap getAlbumArt();
     abstract String getAlbumArtURL() throws JSONException;
     abstract ArrayList<String> getArtists();
     abstract String getSongType();

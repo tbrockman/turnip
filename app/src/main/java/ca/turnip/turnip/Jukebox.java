@@ -105,12 +105,18 @@ public class Jukebox {
     }
 
     public void pauseCurrent(int timeElapsed) {
+        if (jukeboxListener != null) {
+            jukeboxListener.onSongPaused(timeElapsed);
+        }
         setTimeElapsed(timeElapsed);
         pauseTimer();
 
     }
 
     public void unpauseCurrent(int timeElapsed) {
+        if (jukeboxListener != null) {
+            jukeboxListener.onSongResumed(timeElapsed);
+        }
         setTimeElapsed(timeElapsed);
         startTimer();
     }

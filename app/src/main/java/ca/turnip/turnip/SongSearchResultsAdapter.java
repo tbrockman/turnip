@@ -1,8 +1,7 @@
 package ca.turnip.turnip;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
@@ -14,13 +13,12 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import org.json.JSONArray;
+import com.squareup.picasso.Callback;
+import com.squareup.picasso.Picasso;
+
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.util.ArrayList;
-
-import static ca.turnip.turnip.SongQueueAdapter.cancelPotentialWork;
 
 public class SongSearchResultsAdapter
         extends RecyclerView.Adapter<SongSearchResultsAdapter.SongViewHolder> {
@@ -43,10 +41,9 @@ public class SongSearchResultsAdapter
     @Override
     public SongSearchResultsAdapter.SongViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup,
                                                                       int i) {
-        View v = LayoutInflater.from(
-                viewGroup.getContext()).inflate(R.layout.song,
-                viewGroup,
-                false
+        View v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.song,
+                                                                     viewGroup,
+                                                                     false
         );
 
         SongSearchResultsAdapter.SongViewHolder vh = new SongSearchResultsAdapter.SongViewHolder(v);
@@ -55,33 +52,33 @@ public class SongSearchResultsAdapter
     }
 
     @Override
-    public void onBindViewHolder(@NonNull SongSearchResultsAdapter.SongViewHolder songViewHolder, int i) {
+    public void onBindViewHolder(@NonNull final SongSearchResultsAdapter.SongViewHolder songViewHolder, int i) {
         Song song = suggestions.get(i);
         // SongViewHolder.
         songViewHolder.songName.setText(song.getString("name"));
         songViewHolder.artist.setText(TextUtils.join(", ", song.getArtists()));
+
+        if (i == 0) {
+            songViewHolder.itemView.getLayoutParams();
+        }
+
         try {
-            if (!song.hasAlbumArt()) {
-                String albumArtUrl = song.getAlbumArtURL();
-                if (cancelPotentialWork(albumArtUrl, songViewHolder.albumArt)) {
-                    RetrieveAlbumArtTask task = new RetrieveAlbumArtTask(song,
-                                                                         albumArtUrl,
-                                                                         songViewHolder.albumArt,
-                                                                         songViewHolder.progressBar);
-                    Bitmap placeholder = BitmapFactory.decodeResource(context.getResources(),
-                                                                      R.drawable.ic_turnip_icon);
-                    final SongQueueAdapter.AsyncDrawable asyncDrawable =
-                            new SongQueueAdapter.AsyncDrawable(context.getResources(), placeholder, task);
-                    songViewHolder.albumArt.setImageDrawable(asyncDrawable);
-                    task.execute();
+            String albumArtUrl = song.getAlbumArtURL();
+            songViewHolder.progressBar.setVisibility(View.VISIBLE);
+            songViewHolder.albumArt.setVisibility(View.INVISIBLE);
+            Picasso.get().load(albumArtUrl).into(songViewHolder.albumArt, new Callback() {
+
+                @Override
+                public void onSuccess() {
+                    songViewHolder.albumArt.setVisibility(View.VISIBLE);
+                    songViewHolder.progressBar.setVisibility(View.INVISIBLE);
                 }
 
-            }
-            else {
-                songViewHolder.albumArt.setImageBitmap(song.getAlbumArt());
-                songViewHolder.albumArt.setVisibility(View.VISIBLE);
-                songViewHolder.progressBar.setVisibility(View.INVISIBLE);
-            }
+                @Override
+                public void onError(Exception e) {
+
+                }
+            });
         } catch (JSONException e) {
             e.printStackTrace();
         }

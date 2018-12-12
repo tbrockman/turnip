@@ -26,6 +26,9 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.squareup.picasso.Callback;
+import com.squareup.picasso.Picasso;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -245,12 +248,10 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
                     if (data.hasExtra("song")) {
                         String jsonStringSong = data.getStringExtra("song");
                         String type = data.getStringExtra("type");
-                        Bitmap albumArt = data.getParcelableExtra("albumArt");
                         JSONObject jsonSong = new JSONObject(jsonStringSong);
 
                         if (type.equals("spotify")) {
                             song = new SpotifySong(jsonSong);
-                            song.setAlbumArt(albumArt);
                         }
 
                         if (song != null) {
@@ -307,39 +308,34 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
                 skipButton.setVisibility(View.VISIBLE);
             }
 
-            if (currentlyPlaying.hasAlbumArt()) {
-                albumArt.setImageBitmap(currentlyPlaying.getAlbumArt());
-                albumArtSpinner.setVisibility(View.GONE);
-                albumArt.setVisibility(View.VISIBLE);
-            }
-            else {
-                String albumArtUrl = null;
-                try {
-                    albumArtUrl = currentlyPlaying.getAlbumArtURL();
-                } catch(JSONException e) {
-                  Log.e(TAG, e.toString());
-                } finally {
-                    if (albumArtUrl != null) {
-                        RetrieveAlbumArtTask task = new RetrieveAlbumArtTask(currentlyPlaying,
-                                                                             albumArtUrl,
-                                                                             albumArt,
-                                                                             albumArtSpinner);
-                        Bitmap placeholder = BitmapFactory.decodeResource(context.getResources(),
-                                                                          R.drawable.ic_turnip_icon);
-                        final SongQueueAdapter.AsyncDrawable asyncDrawable =
-                                new SongQueueAdapter.AsyncDrawable(context.getResources(),
-                                                                   placeholder,
-                                                                   task);
-                        albumArt.setImageDrawable(asyncDrawable);
-                        task.execute();
-                    }
-                }
-            }
+            String albumArtUrl = null;
+            try {
+                albumArtUrl = currentlyPlaying.getAlbumArtURL();
+            } catch(JSONException e) {
+              Log.e(TAG, e.toString());
+            } finally {
+                if (albumArtUrl != null) {
+                    albumArtSpinner.setVisibility(View.VISIBLE);
+                    albumArt.setVisibility(View.INVISIBLE);
+                    Picasso.get().load(albumArtUrl).into(albumArt, new Callback() {
 
-            artist.setText(TextUtils.join(", ", currentlyPlaying.getArtists()));
-            songName.setText(currentlyPlaying.getString("name"));
-            currentSongContainer.setVisibility(View.VISIBLE);
-            renderCurrentlyPlayingProgress();
+                        @Override
+                        public void onSuccess() {
+                            albumArt.setVisibility(View.VISIBLE);
+                            albumArtSpinner.setVisibility(View.INVISIBLE);
+                        }
+
+                        @Override
+                        public void onError(Exception e) {
+
+                        }
+                    });
+                }
+                artist.setText(TextUtils.join(", ", currentlyPlaying.getArtists()));
+                songName.setText(currentlyPlaying.getString("name"));
+                currentSongContainer.setVisibility(View.VISIBLE);
+                renderCurrentlyPlayingProgress();
+            }
         }
         else {
             currentSongContainer.setVisibility(View.GONE);

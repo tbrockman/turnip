@@ -1,15 +1,11 @@
 package ca.turnip.turnip;
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.util.Base64;
 import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 
 class SpotifySong extends Song {
@@ -40,11 +36,6 @@ class SpotifySong extends Song {
         }
     }
 
-    // TODO: serialize album art bitmap
-    public void setAlbumArt(Bitmap bitmap) {
-        albumArt = bitmap;
-    }
-
     @Override
     void setTimeElapsed(int timeElapsed) {
         try {
@@ -52,14 +43,6 @@ class SpotifySong extends Song {
         } catch (JSONException e) {
             Log.e(TAG, "Error setting time elapsed on song: " + e.toString());
         }
-    }
-
-    public boolean hasAlbumArt() {
-        return this.albumArt != null;
-    }
-
-    public Bitmap getAlbumArt() {
-        return this.albumArt;
     }
 
     public String getAlbumArtURL() throws JSONException {

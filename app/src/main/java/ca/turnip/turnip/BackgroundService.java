@@ -4,9 +4,11 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.os.Binder;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
+import android.support.v4.util.LruCache;
 import android.util.Base64;
 import android.util.Log;
 
@@ -53,6 +55,7 @@ import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
+import okhttp3.internal.cache.DiskLruCache;
 
 import static ca.turnip.turnip.MainActivity.API_ENDPOINT;
 
@@ -231,12 +234,14 @@ public class BackgroundService extends Service {
     private void notifySongPaused(int timeElapsed) {
         if (roomJukeboxListener != null) {
             roomJukeboxListener.onSongPaused(timeElapsed);
+            emitSongPaused(connectedClients, timeElapsed);
         }
     }
 
     private void notifySongResumed(int timeElapsed) {
         if (roomJukeboxListener != null) {
             roomJukeboxListener.onSongResumed(timeElapsed);
+            emitSongResumed(connectedClients, timeElapsed);
         }
     }
 
@@ -358,7 +363,7 @@ public class BackgroundService extends Service {
             // First three characters of payload denote type of request
             try {
                 String token = raw.substring(0, 3);
-                String stringJson;
+                String stringPayload;
                 JSONObject jsonPayload;
                 Song song;
 
@@ -374,27 +379,35 @@ public class BackgroundService extends Service {
                             break;
                         // Someone has added a new song to the queue
                         case "add":
-                            stringJson = raw.substring(4);
-                            jsonPayload = new JSONObject(stringJson);
+                            stringPayload = raw.substring(4);
+                            jsonPayload = new JSONObject(stringPayload);
                             song = new SpotifySong(jsonPayload);
                             enqueueSong(song);
                             break;
                         // Server playing a new song
                         case "ply":
-                            stringJson = raw.substring(4);
-                            jsonPayload = new JSONObject(stringJson);
+                            stringPayload = raw.substring(4);
+                            jsonPayload = new JSONObject(stringPayload);
                             // TODO: handle different song types
                             song = new SpotifySong(jsonPayload);
                             jukebox.playSong(song);
                             break;
                         // Currently playing
                         case "cur":
-                            stringJson = raw.substring(4);
-                            jsonPayload = new JSONObject(stringJson);
+                            stringPayload = raw.substring(4);
+                            jsonPayload = new JSONObject(stringPayload);
                             song = new SpotifySong(jsonPayload);
                             jukebox.playSong(song);
                             break;
-                        // TODO: pause and resume
+                        // Server pausing song
+                        case "pau":
+                            stringPayload = raw.substring(4);
+                            jukebox.pauseCurrent(Integer.valueOf(stringPayload));
+                            break;
+                        // Server resuming song
+                        case "res":
+                            stringPayload = raw.substring(4);
+                            jukebox.unpauseCurrent(Integer.valueOf(stringPayload));
                         default:
                             break;
                     }
@@ -640,6 +653,16 @@ public class BackgroundService extends Service {
 
     public void emitSongPlaying(List<String> clients, Song song) {
         String payload = "ply " + song.toString();
+        emitPayload(clients, Payload.fromBytes(payload.getBytes()));
+    }
+
+    public void emitSongPaused(List<String> clients, int timeElapsed) {
+        String payload = "pau " + String.valueOf(timeElapsed);
+        emitPayload(clients, Payload.fromBytes(payload.getBytes()));
+    }
+
+    public void emitSongResumed(List<String> clients, int timeElapsed) {
+        String payload = "res " + String.valueOf(timeElapsed);
         emitPayload(clients, Payload.fromBytes(payload.getBytes()));
     }
 
