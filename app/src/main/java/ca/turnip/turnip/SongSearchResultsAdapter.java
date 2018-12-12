@@ -1,7 +1,6 @@
 package ca.turnip.turnip;
 
 import android.content.Context;
-import android.graphics.drawable.BitmapDrawable;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
@@ -21,8 +20,10 @@ import org.json.JSONException;
 import java.util.ArrayList;
 
 public class SongSearchResultsAdapter
-        extends RecyclerView.Adapter<SongSearchResultsAdapter.SongViewHolder> {
+        extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
+    private final int VIEW_ITEM = 1;
+    private final int VIEW_PROG = 0;
     private ArrayList<Song> suggestions;
     private Context context;
     private SongSearchActivity.SongClickedCallback songClickedCallback;
@@ -37,51 +38,70 @@ public class SongSearchResultsAdapter
 
     private static final String TAG = SongSearchResultsAdapter.class.getSimpleName();
 
+    @Override
+    public int getItemViewType(int position) {
+        return suggestions.get(position) != null ? VIEW_ITEM: VIEW_PROG;
+    }
+
+
     @NonNull
     @Override
-    public SongSearchResultsAdapter.SongViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup,
-                                                                      int i) {
-        View v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.song,
-                                                                     viewGroup,
-                                                                     false
-        );
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup,
+                                                      int i) {
+        RecyclerView.ViewHolder vh;
+        if (i == VIEW_ITEM) {
+            View v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.song,
+                                                                         viewGroup,
+                                                                        false
+            );
+            vh = new SongSearchResultsAdapter.SongViewHolder(v);
+        } else {
+            View v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.recyclerview_progress_bar,
+                                                                         viewGroup,
+                                                                         false);
 
-        SongSearchResultsAdapter.SongViewHolder vh = new SongSearchResultsAdapter.SongViewHolder(v);
-
+            vh = new ProgressViewHolder(v);
+        }
         return vh;
     }
 
     @Override
-    public void onBindViewHolder(@NonNull final SongSearchResultsAdapter.SongViewHolder songViewHolder, int i) {
-        Song song = suggestions.get(i);
-        // SongViewHolder.
-        songViewHolder.songName.setText(song.getString("name"));
-        songViewHolder.artist.setText(TextUtils.join(", ", song.getArtists()));
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int i) {
+        if (holder instanceof SongViewHolder) {
+            Song song = suggestions.get(i);
+            final SongViewHolder songViewHolder = (SongViewHolder) holder;
+            // SongViewHolder.
+            songViewHolder.songName.setText(song.getString("name"));
+            songViewHolder.artist.setText(TextUtils.join(", ", song.getArtists()));
 
-        if (i == 0) {
-            songViewHolder.itemView.getLayoutParams();
+            if (i == 0) {
+                songViewHolder.itemView.getLayoutParams();
+            }
+
+            try {
+                String albumArtUrl = song.getAlbumArtURL();
+                songViewHolder.progressBar.setVisibility(View.VISIBLE);
+                songViewHolder.albumArt.setVisibility(View.INVISIBLE);
+                Picasso.get().load(albumArtUrl).into(songViewHolder.albumArt, new Callback() {
+
+                    @Override
+                    public void onSuccess() {
+                        songViewHolder.albumArt.setVisibility(View.VISIBLE);
+                        songViewHolder.progressBar.setVisibility(View.INVISIBLE);
+                    }
+
+                    @Override
+                    public void onError(Exception e) {
+
+                    }
+                });
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        } else {
+            ((ProgressViewHolder)holder).progressBar.setIndeterminate(true);
         }
 
-        try {
-            String albumArtUrl = song.getAlbumArtURL();
-            songViewHolder.progressBar.setVisibility(View.VISIBLE);
-            songViewHolder.albumArt.setVisibility(View.INVISIBLE);
-            Picasso.get().load(albumArtUrl).into(songViewHolder.albumArt, new Callback() {
-
-                @Override
-                public void onSuccess() {
-                    songViewHolder.albumArt.setVisibility(View.VISIBLE);
-                    songViewHolder.progressBar.setVisibility(View.INVISIBLE);
-                }
-
-                @Override
-                public void onError(Exception e) {
-
-                }
-            });
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
     }
 
     @Override
@@ -109,6 +129,15 @@ public class SongSearchResultsAdapter
                     songClickedCallback.songChosen(suggestions.get(i));
                 }
             });
+        }
+    }
+
+    public class ProgressViewHolder extends RecyclerView.ViewHolder {
+        ProgressBar progressBar;
+
+        public ProgressViewHolder(View itemView) {
+            super(itemView);
+            progressBar = (ProgressBar)itemView.findViewById(R.id.progressBar);
         }
     }
 }

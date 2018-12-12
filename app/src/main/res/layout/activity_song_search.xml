@@ -13,8 +13,8 @@
         android:id="@+id/searchToolbar"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        app:theme="@style/ActionBarStyle">
+        android:background="@color/colorPrimary"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
         <EditText
             android:id="@+id/searchEditText"
             android:layout_width="match_parent"
@@ -23,7 +23,8 @@
             android:inputType="text"
             android:maxLines="1"
             android:imeOptions="actionSearch"
-            android:background="@android:color/transparent"/>
+            android:background="@android:color/transparent"
+            android:textCursorDrawable="@android:color/transparent"/>
     </android.support.v7.widget.Toolbar>
 
     <android.support.v7.widget.RecyclerView
@@ -31,6 +32,5 @@
         android:layout_width="match_parent"
         android:paddingTop="10dp"
         android:layout_height="wrap_content" />
-
 
 </android.support.design.widget.AppBarLayout>

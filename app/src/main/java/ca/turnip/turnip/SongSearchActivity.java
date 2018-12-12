@@ -1,6 +1,5 @@
 package ca.turnip.turnip;
 
-import android.app.SearchManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -11,18 +10,19 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -54,7 +54,9 @@ public class SongSearchActivity extends AppCompatActivity {
 
     // Search results
 
+    private boolean isLoading = false;
     private ArrayList<Song> songs;
+    private String nextUrl;
 
     // Search delay
 
@@ -92,6 +94,22 @@ public class SongSearchActivity extends AppCompatActivity {
         songSearchResultsRecyclerView.setHasFixedSize(true);
         songSearchResultsRecyclerView.setAdapter(songSearchResultsAdapter);
         songSearchResultsRecyclerView.setLayoutManager(songSearchLayoutManager);
+        songSearchResultsRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+
+                if (!songSearchResultsRecyclerView.canScrollVertically(1)) {
+                    if (nextUrl != null && !isLoading) {
+                        isLoading = true;
+                        songs.add(null);
+                        songSearchResultsAdapter.notifyItemInserted(songs.size());
+                        songSearchResultsRecyclerView.scrollToPosition(songs.size() - 1);
+                        backgroundService.getSpotifyUrl(nextUrl, spotifySearchCallback);
+                    }
+                }
+            }
+        });
 
         toolbar = findViewById(R.id.searchToolbar);
 
@@ -185,6 +203,7 @@ public class SongSearchActivity extends AppCompatActivity {
     }
 
     private void searchSpotify(String search) {
+        songs.clear();
         backgroundService.searchSpotifyAPI(search, "track", spotifySearchCallback);
     }
 
@@ -201,7 +220,6 @@ public class SongSearchActivity extends AppCompatActivity {
         @Override
         public void songChosen(Song result) {
             Intent data = new Intent();
-            //Song result = songs.get(pos);
             data.putExtra("song", result.toString());
             data.putExtra("type", "spotify");
             setResult(RESULT_OK, data);
@@ -213,30 +231,45 @@ public class SongSearchActivity extends AppCompatActivity {
 
         @Override
         public void onFailure(Call call, IOException e) {
-
+            isLoading = false;
         }
 
         @Override
         public void onResponse(Call call, final Response response) throws IOException {
-
             runOnUiThread(new Runnable() {
 
                 @Override
                 public void run() {
                     try {
                         final JSONObject jsonResponse = new JSONObject(response.body().string());
-                        final JSONArray jsonArray = jsonResponse.getJSONObject("tracks")
-                                .getJSONArray("items");
-                        songs.clear();
+                        final JSONObject tracks = jsonResponse.getJSONObject("tracks");
+                        final JSONArray jsonArray = tracks.getJSONArray("items");
+
+                        if (tracks.has("next")) {
+                            nextUrl = tracks.getString("next");
+                        }
+                        else {
+                            nextUrl = null;
+                        }
+
+                        // Remove progress bar element from dataset
+                        if (songs.size() > 0) {
+                            songs.remove(songs.size()-1);
+                            songSearchResultsAdapter.notifyItemRemoved(songs.size()-1);
+                        }
+
                         for (int i = 0; i < jsonArray.length(); i++) {
                             Song song = new SpotifySong(jsonArray.getJSONObject(i));
                             songs.add(song);
-                            Log.i(TAG, "Song: " + song.toString());
+                            Log.i(TAG, song.getString("name"));
                         }
 
+                        //songSearchResultsAdapter.notifyItemRangeInserted(start, songs.size());
+                        // TODO: figure out why only notifyDataSetChanged works here
                         songSearchResultsAdapter.notifyDataSetChanged();
+                        isLoading = false;
                     } catch (JSONException e) {
-                        Log.e(TAG, "Error converting search response body to JSON.");
+                        Log.e(TAG, "Error converting search response body to JSON: " + e.toString());
                     } catch (IOException e) {
                         Log.e(TAG, e.toString());
                     }

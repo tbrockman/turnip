@@ -692,6 +692,17 @@ public class BackgroundService extends Service {
         lastRequest.enqueue(callback);
     }
 
+    public void getSpotifyUrl(String url, Callback callback) {
+        final Request request =
+                new Request.Builder()
+                           .url(url)
+                           .addHeader("Authorization", "Bearer " + spotifyAccessToken)
+                           .addHeader("Accept", "application/json")
+                           .build();
+        lastRequest = okHttpClient.newCall(request);
+        lastRequest.enqueue(callback);
+    }
+
     public void getAccessAndRefreshTokenFromCode(String authorizationCode, Callback callback) {
         try {
             JSONObject jsonBody = new JSONObject();
