@@ -74,10 +74,6 @@ public class SongSearchResultsAdapter
             songViewHolder.songName.setText(song.getString("name"));
             songViewHolder.artist.setText(TextUtils.join(", ", song.getArtists()));
 
-            if (i == 0) {
-                songViewHolder.itemView.getLayoutParams();
-            }
-
             try {
                 String albumArtUrl = song.getAlbumArtURL();
                 songViewHolder.progressBar.setVisibility(View.VISIBLE);

@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -22,8 +23,9 @@ public class RoomListActivity extends AppCompatActivity {
 
     private BackgroundService backgroundService;
 
-    // ProgressBar
+    // ProgressBar and SwipeRefresh
 
+    private SwipeRefreshLayout roomListSwipeRefresh;
     private ProgressBar findingRoomsProgressBar;
 
     // RecyclerView
@@ -41,6 +43,7 @@ public class RoomListActivity extends AppCompatActivity {
         public void onRoomFound(BackgroundService.Endpoint host) {
             findingRoomsProgressBar.setVisibility(View.INVISIBLE);
             rooms.add(host);
+            roomListSwipeRefresh.setRefreshing(false);
             adapter.notifyItemInserted(rooms.size() - 1);
         }
 
@@ -51,15 +54,18 @@ public class RoomListActivity extends AppCompatActivity {
                 findingRoomsProgressBar.setVisibility(View.VISIBLE);
             }
             Log.i(TAG, "room lost: " + endpointId);
+            int i = 0;
             while (it.hasNext()) {
                 BackgroundService.Endpoint current = it.next();
                 Log.i(TAG, current.toString() + " " + endpointId);
 
                 if (current.getId().equals(endpointId)) {
                     it.remove();
+                    adapter.notifyItemRemoved(i);
                 }
+                i++;
             }
-            adapter.notifyDataSetChanged();
+
         }
     };
 
@@ -85,12 +91,20 @@ public class RoomListActivity extends AppCompatActivity {
         bindConnectionService();
 
         findingRoomsProgressBar = findViewById(R.id.findingRoomsProgressBar);
+        roomListSwipeRefresh = findViewById(R.id.roomListSwipeRefresh);
         recyclerView =  findViewById(R.id.roomRecyclerView);
         layoutManager = new LinearLayoutManager(this);
         adapter = new RoomListAdapter(rooms);
 
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(adapter);
+
+        roomListSwipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                refreshHosts();
+            }
+        });
     }
 
     @Override
@@ -110,6 +124,17 @@ public class RoomListActivity extends AppCompatActivity {
         super.onDestroy();
         backgroundService.stopDiscovery();
         unbindService(connection);
+    }
+
+    public void refreshHosts() {
+        if (backgroundService != null) {
+            rooms.clear();
+            adapter.notifyDataSetChanged();
+            if (backgroundService.isDiscovering()) {
+                backgroundService.stopDiscovery();
+            }
+            backgroundService.startDiscovery();
+        }
     }
 
     private void bindConnectionService() {

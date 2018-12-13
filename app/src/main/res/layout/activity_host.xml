@@ -90,15 +90,42 @@
 
                 <Switch
                     android:id="@+id/spotifySwitch"
-                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="end|center"
+                    android:layout_gravity="right"
                     android:checked="false"
                     android:padding="0dp"
                     android:showText="false"
                     android:thumb="@drawable/ic_spotify_logo"
                     android:thumbTint="#ffffff"
                     tools:checked="true" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginTop="20dp"
+                android:visibility="invisible">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:padding="0dp"
+                    android:text="@string/vote_mode_text"
+                    android:textAlignment="viewStart"
+                    android:textSize="18sp" />
+
+                <Switch
+                    android:id="@+id/switch1"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="right"
+                    android:showText="false"
+                    android:splitTrack="false"
+                    android:textAllCaps="false"
+                    android:thumb="@drawable/ic_circle"
+                    tools:checked="true" />
+
             </TableRow>
 
         </TableLayout>

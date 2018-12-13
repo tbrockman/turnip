@@ -7,6 +7,11 @@
     <string name="room_password_hint">Room password</string>
     <string name="spotify_logo">Spotify logo</string>
     <string name="spotify_switch_text">Play songs from Spotify</string>
+    <string name="vote_mode_text">Vote to skip</string>
+    <string-array name="vote_mode_options">
+        <item>None</item>
+        <item>Majority</item>
+    </string-array>
     <string name="no_song_text_header">No one\'s playing anything</string>
     <string name="no_song_text_subtitle">Add some songs to get things started</string>
     <string name="album_art_content_description">Song album art</string>

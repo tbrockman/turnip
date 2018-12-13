@@ -54,6 +54,7 @@ public class SongSearchActivity extends AppCompatActivity {
 
     // Search results
 
+    private boolean newSearch = false;
     private boolean isLoading = false;
     private ArrayList<Song> songs;
     private String nextUrl;
@@ -102,8 +103,9 @@ public class SongSearchActivity extends AppCompatActivity {
                 if (!songSearchResultsRecyclerView.canScrollVertically(1)) {
                     if (nextUrl != null && !isLoading) {
                         isLoading = true;
+                        newSearch = false;
                         songs.add(null);
-                        songSearchResultsAdapter.notifyItemInserted(songs.size());
+                        songSearchResultsAdapter.notifyItemInserted(songs.size()-1);
                         songSearchResultsRecyclerView.scrollToPosition(songs.size() - 1);
                         backgroundService.getSpotifyUrl(nextUrl, spotifySearchCallback);
                     }
@@ -203,7 +205,7 @@ public class SongSearchActivity extends AppCompatActivity {
     }
 
     private void searchSpotify(String search) {
-        songs.clear();
+        newSearch = true;
         backgroundService.searchSpotifyAPI(search, "track", spotifySearchCallback);
     }
 
@@ -250,6 +252,11 @@ public class SongSearchActivity extends AppCompatActivity {
                         }
                         else {
                             nextUrl = null;
+                        }
+
+                        if (newSearch) {
+                            songs.clear();
+                            songSearchResultsAdapter.notifyDataSetChanged();
                         }
 
                         // Remove progress bar element from dataset
