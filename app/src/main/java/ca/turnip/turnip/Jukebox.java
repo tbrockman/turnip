@@ -56,6 +56,9 @@ public class Jukebox {
     }
 
     public void playSong(Song song) {
+
+        if (song == null) { return; }
+
         Iterator<Song> it = songQueue.iterator();
         while (it.hasNext()) {
             Song next = it.next();

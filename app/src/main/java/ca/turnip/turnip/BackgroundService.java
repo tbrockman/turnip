@@ -681,7 +681,7 @@ public class BackgroundService extends Service {
 
     // Spotify API interactions
 
-    public void searchSpotifyAPI(String search, String type, Callback callback) {
+    public synchronized void searchSpotifyAPI(String search, String type, Callback callback) {
         final Request request =
                 new Request.Builder()
                            .url("https://api.spotify.com/v1/search?q=" + search + "*&type=" + type)
@@ -692,7 +692,7 @@ public class BackgroundService extends Service {
         lastRequest.enqueue(callback);
     }
 
-    public void getSpotifyUrl(String url, Callback callback) {
+    public synchronized void getSpotifyUrl(String url, Callback callback) {
         final Request request =
                 new Request.Builder()
                            .url(url)

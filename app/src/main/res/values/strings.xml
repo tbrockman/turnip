@@ -13,7 +13,7 @@
         <item>Majority</item>
     </string-array>
     <string name="no_song_text_header">No one\'s playing anything</string>
-    <string name="no_song_text_subtitle">Add some songs to get things started</string>
+    <string name="no_song_text_subtitle">Add some songs to get things started.</string>
     <string name="album_art_content_description">Song album art</string>
     <string name="sad_boombox_content_description">Sad boombox drawable</string>
     <string name="preference_file_key">ca.turnip.turnip.PREFERENCE_FILE_KEY</string>
@@ -27,4 +27,9 @@
     <string name="leave_room_text_user">Are you sure you want to leave the room?</string>
     <string name="leave_room_text_host">Are you sure you want to leave the room?\n\nLeaving will close the room and all connected participants will be removed.</string>
     <string name="leave_room_positive">Leave</string>
+    <string name="search_icon_description">Search icon</string>
+    <string name="empty_search_list_header">Find songs to play</string>
+    <string name="empty_search_body">Search your favorite songs on Spotify</string>
+    <string name="no_results_found">No search results found</string>
+    <string name="no_results_hints">Make sure to only search by either song name, artist, or album.</string>
 </resources>

@@ -20,9 +20,9 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -42,10 +42,11 @@ public class SongSearchActivity extends AppCompatActivity {
 
     private static final String TAG = SongSearchActivity.class.getSimpleName();
     private static final int SPEECH_REQUEST_CODE = 0;
-    private Context context = this;
 
     // UI
 
+    private LinearLayout noSongsFoundCountainer;
+    private ProgressBar newSearchLoadingProgressBar;
     private RecyclerView.LayoutManager songSearchLayoutManager;
     private RecyclerView songSearchResultsRecyclerView;
     private EditText searchEditText;
@@ -89,6 +90,9 @@ public class SongSearchActivity extends AppCompatActivity {
         songs = new ArrayList<>();
         searchTimer = new Timer();
 
+        newSearchLoadingProgressBar = findViewById(R.id.newSearchLoading);
+        noSongsFoundCountainer = findViewById(R.id.noSongsFoundCountainer);
+
         songSearchResultsRecyclerView = findViewById(R.id.searchRecyclerView);
         songSearchLayoutManager = new LinearLayoutManager(this);
         songSearchResultsAdapter = new SongSearchResultsAdapter(songs, this, songClickedCallback);
@@ -126,7 +130,7 @@ public class SongSearchActivity extends AppCompatActivity {
                 public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                     final String search = charSequence.toString();
 
-                    if (charSequence.length() > 0) {
+                    if (search.length() > 0) {
                         if (searchTask != null) {
                             searchTask.cancel();
 
@@ -206,6 +210,13 @@ public class SongSearchActivity extends AppCompatActivity {
 
     private void searchSpotify(String search) {
         newSearch = true;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                noSongsFoundCountainer.setVisibility(View.GONE);
+                newSearchLoadingProgressBar.setVisibility(View.VISIBLE);
+            }
+        });
         backgroundService.searchSpotifyAPI(search, "track", spotifySearchCallback);
     }
 
@@ -249,6 +260,9 @@ public class SongSearchActivity extends AppCompatActivity {
 
                         if (tracks.has("next")) {
                             nextUrl = tracks.getString("next");
+                            if (nextUrl.equals("null")) {
+                                nextUrl = null;
+                            }
                         }
                         else {
                             nextUrl = null;
@@ -257,6 +271,7 @@ public class SongSearchActivity extends AppCompatActivity {
                         if (newSearch) {
                             songs.clear();
                             songSearchResultsAdapter.notifyDataSetChanged();
+                            newSearchLoadingProgressBar.setVisibility(View.GONE);
                         }
 
                         // Remove progress bar element from dataset
@@ -269,6 +284,10 @@ public class SongSearchActivity extends AppCompatActivity {
                             Song song = new SpotifySong(jsonArray.getJSONObject(i));
                             songs.add(song);
                             Log.i(TAG, song.getString("name"));
+                        }
+
+                        if (newSearch && songs.size() == 0) {
+                            noSongsFoundCountainer.setVisibility(View.VISIBLE);
                         }
 
                         //songSearchResultsAdapter.notifyItemRangeInserted(start, songs.size());

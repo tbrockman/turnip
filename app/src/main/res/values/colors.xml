@@ -7,6 +7,7 @@
     <color name="colorAccent">#d81b60</color>
     <color name="turnipWhite">#ffffff</color>
     <color name="colorBackground">#191919</color>
+    <color name="colorLighterBackground">#3a3a3a</color>
     <color name="colorButtonBackgroundPrimary">#673ab7</color>
     <color name="colorButtonTextPrimary">#efebe9</color>
     <color name="spotifyGreen">#1DB954</color>

@@ -62,10 +62,10 @@ class ServerJukebox extends Jukebox {
                                                         .uri
                                                         .equals(current.getString("uri"))) {
                                             Song next = getNextSong();
-                                            ServerJukebox.super.playSong(next);
+                                            if (next != null) {
+                                                ServerJukebox.super.playSong(next);
+                                            }
                                         }
-
-                                        Log.i(TAG, String.valueOf(playerState.playbackPosition));
                                         if (playerState.isPaused && !wasPaused) {
                                             wasPaused = true;
                                             Log.i(TAG, "pausing:");
