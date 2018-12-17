@@ -1,6 +1,7 @@
 package ca.turnip.turnip;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -32,7 +33,6 @@ import static com.spotify.sdk.android.authentication.LoginActivity.REQUEST_CODE;
 public class HostActivity extends BackgroundServiceConnectedActivity {
 
     private static final String TAG = HostActivity.class.getSimpleName();
-    public static final int AUTH_TOKEN_REQUEST_CODE = 0x10;
     public static final int AUTH_CODE_REQUEST_CODE = 0x11;
 
     // Spotify
@@ -47,6 +47,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
     private Button startButton;
     private TextInputEditText roomName;
     private ErrorDialog errorDialog;
+    private SpotifyNotFoundDialog notFoundDialog;
 
     private Context context;
 
@@ -73,8 +74,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == REQUEST_CODE) {
+        if (requestCode == AUTH_CODE_REQUEST_CODE) {
             final AuthenticationResponse response = AuthenticationClient.getResponse(resultCode, data);
             Log.i(TAG, "code:" + String.valueOf(resultCode) + "data:" + data.toString());
 
@@ -145,6 +145,10 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
                 }
             }
         });
+    }
+
+    private void createSpotifyNotInstalledDialog() {
+        notFoundDialog = new SpotifyNotFoundDialog(this);
     }
 
     private void initializeStartButton() {
@@ -226,17 +230,31 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
     }
 
     public void authenticateSpotify() {
-        try {
-            spotifyRefreshToken  = backgroundService.getStoredSpotifyRefreshToken();
-        } catch (Exception e) {
-            Log.e(TAG, "Error retrieving spotifyRefreshToken: " + e.toString());
-        } finally {
-            if (spotifyRefreshToken != null) {
-                backgroundService.getAccessTokenFromRefreshToken(spotifyRefreshToken);
-            } else {
-                openAuthenticationActivity();
+        if (isSpotifyInstalled()) {
+            try {
+                spotifyRefreshToken  = backgroundService.getStoredSpotifyRefreshToken();
+            } catch (Exception e) {
+                Log.e(TAG, "Error retrieving spotifyRefreshToken: " + e.toString());
+            } finally {
+                if (spotifyRefreshToken != null) {
+                    backgroundService.getAccessTokenFromRefreshToken(spotifyRefreshToken);
+                } else {
+                    openAuthenticationActivity();
+                }
             }
         }
+        else {
+            if (backgroundService.existsStoredSpotifyRefreshToken()) {
+                backgroundService.removeStoredSpotifyRefreshToken();
+            }
+            spotifySwitch.setChecked(false);
+            createSpotifyNotInstalledDialog();
+        }
+    }
+
+    private boolean isSpotifyInstalled() {
+        return Utils.isPackageInstalled("com.spotify.music",
+                                        context.getPackageManager());
     }
 
     private void openAuthenticationActivity() {

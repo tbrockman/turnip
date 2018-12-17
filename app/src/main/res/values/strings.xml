@@ -33,4 +33,5 @@
     <string name="no_results_found">No search results found</string>
     <string name="no_results_hints">We weren\'t able to find any songs, artists, or albums by that name.</string>
     <string name="ok">OK</string>
+    <string name="install">Install</string>
 </resources>

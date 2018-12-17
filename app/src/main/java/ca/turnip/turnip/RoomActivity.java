@@ -447,7 +447,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     public Intent getParentActivityIntent() { return getParentActivityIntentImpl(); }
 
     private Intent getParentActivityIntentImpl() {
-        Intent i = null;
+        Intent i;
         Intent intent = getIntent();
         boolean isHost = intent.getBooleanExtra("isHost", false);
 

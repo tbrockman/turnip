@@ -302,6 +302,17 @@ public class BackgroundService extends Service {
         return sharedPref.contains(getString(R.string.shared_preference_token_key));
     }
 
+    public void removeStoredSpotifyRefreshToken() {
+        SharedPreferences sharedPref =
+                context.getSharedPreferences(getString(R.string.preference_file_key),
+                        Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+
+        editor.remove(getString(R.string.shared_preference_token_key));
+        editor.remove(getString(R.string.shared_preferences_iv));
+        editor.commit();
+    }
+
     public String getStoredSpotifyRefreshToken() throws IOException, BadPaddingException,
             NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException,
             InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchProviderException,
