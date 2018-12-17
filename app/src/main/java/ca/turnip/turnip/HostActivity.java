@@ -1,5 +1,6 @@
 package ca.turnip.turnip;
 
+import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -20,22 +21,32 @@ import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TableLayout;
 
-public class HostActivity extends SpotifyAuthenticatedActivity {
+import com.spotify.sdk.android.authentication.AuthenticationClient;
+import com.spotify.sdk.android.authentication.AuthenticationRequest;
+import com.spotify.sdk.android.authentication.AuthenticationResponse;
+
+import static ca.turnip.turnip.MainActivity.APP_REDIRECT_URI;
+import static ca.turnip.turnip.MainActivity.CLIENT_ID;
+import static com.spotify.sdk.android.authentication.LoginActivity.REQUEST_CODE;
+
+public class HostActivity extends BackgroundServiceConnectedActivity {
 
     private static final String TAG = HostActivity.class.getSimpleName();
     public static final int AUTH_TOKEN_REQUEST_CODE = 0x10;
     public static final int AUTH_CODE_REQUEST_CODE = 0x11;
 
-    private Boolean spotifyIsChecked = false;
+    // Spotify
+
     private Boolean spotifyEnabled = false;
-    private int spotifyExpiresIn;
-    private String spotifyAccessToken;
     private String spotifyRefreshToken;
+
+    // UI
 
     private TableLayout table;
     private Switch spotifySwitch;
     private Button startButton;
     private TextInputEditText roomName;
+    private ErrorDialog errorDialog;
 
     private Context context;
 
@@ -57,13 +68,83 @@ public class HostActivity extends SpotifyAuthenticatedActivity {
     @Override
     protected void onResume() {
         super.onResume();
+    }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQUEST_CODE) {
+            final AuthenticationResponse response = AuthenticationClient.getResponse(resultCode, data);
+            Log.i(TAG, "code:" + String.valueOf(resultCode) + "data:" + data.toString());
+
+            switch (response.getType()) {
+                // did we get the code we requested
+                case CODE:
+                    backgroundService.getAccessAndRefreshTokenFromCode(response.getCode());
+                    break;
+                default:
+                    handleSpotifyAuthError();
+                    spotifySwitch.setChecked(false);
+                    break;
+            }
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         unbindConnectionService();
+    }
+
+    private CompoundButton.OnCheckedChangeListener switchListener =
+            new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    if (isChecked) {
+                        authenticateSpotify();
+                    }
+                }
+            };
+
+    private AuthenticationListener authenticationListener = new AuthenticationListener() {
+        @Override
+        public void onTokenSuccess() {
+            handleSpotifyAuthSuccess();
+        }
+
+        @Override
+        public void onTokenFailure() {
+            handleSpotifyAuthError();
+
+        }
+    };
+
+    private void handleSpotifyAuthSuccess() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                spotifyEnabled = true;
+                allowSubmit();
+            }
+        });
+    }
+
+    private void handleSpotifyAuthError() {
+        final Activity activity = this;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                spotifyEnabled = false;
+                spotifySwitch.setChecked(false);
+                if (isNetworkAvailable(context)) {
+                    errorDialog = new ErrorDialog(activity,"Authentication error", "Unable to retrieve necessary permissions from Spotify.");
+                }
+                else {
+                    errorDialog = new ErrorDialog(activity, "Network error", "Unable to establish network connection to Spotify.");
+                }
+            }
+        });
     }
 
     private void initializeStartButton() {
@@ -73,7 +154,7 @@ public class HostActivity extends SpotifyAuthenticatedActivity {
 
     private void allowSubmit() {
         String text = roomName.getText().toString();
-        if (text.length() > 0 && spotifyIsChecked) {
+        if (text.length() > 0 && spotifyEnabled) {
             enableButton(startButton);
         }
         else {
@@ -128,19 +209,6 @@ public class HostActivity extends SpotifyAuthenticatedActivity {
         });
     }
 
-    private CompoundButton.OnCheckedChangeListener switchListener =
-        new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    authenticateSpotify();
-                }
-
-                spotifyIsChecked = isChecked;
-                allowSubmit();
-            }
-    };
-
     private void initializeSwitch() {
         spotifySwitch = findViewById(R.id.spotifySwitch);
         ColorStateList colorStateList = new ColorStateList(
@@ -157,12 +225,41 @@ public class HostActivity extends SpotifyAuthenticatedActivity {
         spotifySwitch.setOnCheckedChangeListener(switchListener);
     }
 
+    public void authenticateSpotify() {
+        try {
+            spotifyRefreshToken  = backgroundService.getStoredSpotifyRefreshToken();
+        } catch (Exception e) {
+            Log.e(TAG, "Error retrieving spotifyRefreshToken: " + e.toString());
+        } finally {
+            if (spotifyRefreshToken != null) {
+                backgroundService.getAccessTokenFromRefreshToken(spotifyRefreshToken);
+            } else {
+                openAuthenticationActivity();
+            }
+        }
+    }
+
+    private void openAuthenticationActivity() {
+        AuthenticationRequest request = getAuthenticationRequest(AuthenticationResponse.Type.CODE);
+        AuthenticationClient.openLoginActivity(this,
+                                                AUTH_CODE_REQUEST_CODE,
+                                                request);
+    }
+
+    private AuthenticationRequest getAuthenticationRequest(AuthenticationResponse.Type type) {
+        return new AuthenticationRequest.Builder(CLIENT_ID, type, APP_REDIRECT_URI)
+                                        .setShowDialog(false)
+                                        .setScopes(new String[]{"app-remote-control"})
+                                        .build();
+    }
+
     private void bindHostActivityConnectionService() {
         connection = new ServiceConnection() {
 
             @Override
             public void onServiceConnected(ComponentName name, IBinder service) {
                 backgroundService = ((BackgroundService.LocalBinder)service).getService();
+                backgroundService.subscribeAuthListener(authenticationListener);
             }
 
             @Override
@@ -171,7 +268,7 @@ public class HostActivity extends SpotifyAuthenticatedActivity {
                 backgroundService = null;
             }
         };
-        bindConnectionService(context);
+        super.bindConnectionService(this);
     }
 
     public void cancelClicked(View view) {
@@ -186,12 +283,7 @@ public class HostActivity extends SpotifyAuthenticatedActivity {
         roomIntent.putExtra("roomName", roomName.getText().toString());
 //        roomIntent.putExtra("roomPassword", roomPassword.getText().toString());
         roomIntent.putExtra("isHost", true);
-
         roomIntent.putExtra("spotifyEnabled", spotifyEnabled);
-        roomIntent.putExtra("spotifyAccessToken", spotifyAccessToken);
-        roomIntent.putExtra("spotifyRefreshToken", spotifyRefreshToken);
-        roomIntent.putExtra("spotifyExiresIn", spotifyExpiresIn);
-
         startActivity(roomIntent);
     }
 }

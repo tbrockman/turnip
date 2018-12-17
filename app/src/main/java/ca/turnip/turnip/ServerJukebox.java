@@ -23,9 +23,11 @@ class ServerJukebox extends Jukebox {
     private SpotifyAppRemote spotifyAppRemote;
     private boolean spotifyIsConnected = false;
     private boolean wasPaused = false;
+    private boolean lock = false;
     private CallResult.ResultCallback<Empty> spotifyCallback = new CallResult.ResultCallback<Empty>() {
         @Override
         public void onResult(Empty empty) {
+            lock = false;
         }
     };
 
@@ -47,6 +49,7 @@ class ServerJukebox extends Jukebox {
             @Override
             public void onConnected(SpotifyAppRemote remote) {
                 spotifyAppRemote = remote;
+                spotifyAppRemote.getConnectApi().connectSwitchToLocalDevice();
                 spotifyIsConnected = true;
                 spotifyAppRemote.getPlayerApi()
                                 .subscribeToPlayerState()
@@ -55,15 +58,18 @@ class ServerJukebox extends Jukebox {
                                     public void onEvent(PlayerState playerState) {
 
                                         Song current = getCurrentlyPlaying();
+                                        String spotifyTrackURI = playerState.track.uri;
                                         // TODO: if spotify starts playing another song
                                         // query it and display it as currently playing
                                         if (current != null &&
-                                            !playerState.track
-                                                        .uri
-                                                        .equals(current.getString("uri"))) {
+                                            !spotifyTrackURI.equals(current.getString("uri"))) {
                                             Song next = getNextSong();
                                             if (next != null) {
-                                                ServerJukebox.super.playSong(next);
+                                                if (spotifyTrackURI.equals(next.get("uri"))) {
+                                                    ServerJukebox.super.playSong(next);
+                                                } else if (!lock) {
+                                                    playSong(next);
+                                                }
                                             }
                                         }
                                         if (playerState.isPaused && !wasPaused) {
@@ -103,11 +109,13 @@ class ServerJukebox extends Jukebox {
     @Override
     public void enqueueSong(Song song) {
         super.enqueueSong(song);
+        Log.i(TAG, "enqueuing as server");
         queueSpotify(song.getString("uri"));
     }
 
     public void playSpotify(String uri) {
         if (spotifyIsConnected) {
+            lock = true;
             CallResult<Empty> result = spotifyAppRemote.getPlayerApi().play(uri);
             result.setResultCallback(spotifyCallback);
         }
@@ -129,12 +137,13 @@ class ServerJukebox extends Jukebox {
 
     @Override
     public void playNextSong() {
-        super.playNextSong();
-        Song next = getNextSong();
-        if (next != null) {
-            super.playSong(next);
-            skipSpotify();
-        }
+        skipSpotify();
+//        super.playNextSong();
+//        Song next = getNextSong();
+//        if (next != null) {
+//            super.playSong(next);
+//
+//        }
     }
 
     @Override

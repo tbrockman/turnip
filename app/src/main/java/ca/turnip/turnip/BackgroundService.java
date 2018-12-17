@@ -4,11 +4,10 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
-import android.support.v4.util.LruCache;
 import android.util.Base64;
 import android.util.Log;
 
@@ -55,7 +54,7 @@ import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
-import okhttp3.internal.cache.DiskLruCache;
+import okhttp3.Response;
 
 import static ca.turnip.turnip.MainActivity.API_ENDPOINT;
 
@@ -90,10 +89,23 @@ public class BackgroundService extends Service {
     private String spotifyAccessToken;
     private String spotifyRefreshToken;
 
+    // Token refreshing
+    private int spotifyExpiresIn;
+    private Handler spotifyTimerHandler = new Handler();
+    private Runnable spotifyRefreshTokenTimer = new Runnable() {
+        @Override
+        public void run() {
+            if (spotifyRefreshToken != null) {
+                getAccessTokenFromRefreshToken(spotifyRefreshToken);
+            }
+        }
+    };
+
     // Potential listeners
 
     private RoomListListener roomListListener;
     private RoomJukeboxListener roomJukeboxListener;
+    private AuthenticationListener authenticationListener;
 
     // Jukebox
 
@@ -167,6 +179,7 @@ public class BackgroundService extends Service {
     public void destroyRoom() {
         cancelLastRequest();
         if (isHost) {
+            spotifyTimerHandler.removeCallbacks(spotifyRefreshTokenTimer);
             connectionsClient.stopAllEndpoints();
         } else {
             connectionsClient.disconnectFromEndpoint(serverEndpoint);
@@ -251,10 +264,27 @@ public class BackgroundService extends Service {
         }
     }
 
+    public void subscribeAuthListener(AuthenticationListener listener) { authenticationListener = listener; }
+
+    public void unsubscribeAuthListener() { authenticationListener = null; }
+
+    private void notifyAuthFailed() {
+        if (authenticationListener != null) {
+            authenticationListener.onTokenFailure();
+        }
+    }
+
+    private void notifyAuthSuccessful() {
+        if (authenticationListener != null) {
+            authenticationListener.onTokenSuccess();
+        }
+    }
+
     // Spotify tokens getter/setters
 
     public void setSpotifyAccessToken(String spotifyAccessToken) {
         this.spotifyAccessToken = spotifyAccessToken;
+        emitSpotifyAccessTokenToConnectedClients(spotifyAccessToken);
     }
 
     public String getSpotifyAccessToken() {
@@ -317,6 +347,11 @@ public class BackgroundService extends Service {
 
     public void setSpotifyRefreshToken(String spotifyRefreshToken) {
         this.spotifyRefreshToken = spotifyRefreshToken;
+        try {
+            storeSpotifyRefreshToken(spotifyRefreshToken);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     // Server payload logic
@@ -703,7 +738,7 @@ public class BackgroundService extends Service {
         lastRequest.enqueue(callback);
     }
 
-    public void getAccessAndRefreshTokenFromCode(String authorizationCode, Callback callback) {
+    public void getAccessAndRefreshTokenFromCode(String authorizationCode) {
         try {
             JSONObject jsonBody = new JSONObject();
             jsonBody.put("authorization_code", authorizationCode);
@@ -712,18 +747,18 @@ public class BackgroundService extends Service {
             RequestBody body = RequestBody.create(JSON, jsonBody.toString());
             final Request request =
                     new Request.Builder()
-                               .url(API_ENDPOINT + "/spotify/token")
-                               .post(body)
-                               .build();
+                            .url(API_ENDPOINT + "/spotify/token")
+                            .post(body)
+                            .build();
 
             lastRequest = okHttpClient.newCall(request);
-            lastRequest.enqueue(callback);
+            lastRequest.enqueue(accessAndRefreshTokenCallback);
         } catch (JSONException e) {
             Log.e(TAG, "Error sending JSON request for refresh token: " + e.toString());
         }
     }
 
-    public void getAccessTokenFromRefreshToken(String refreshToken, Callback callback) {
+    public void getAccessTokenFromRefreshToken(String refreshToken) {
         try {
             JSONObject jsonBody = new JSONObject();
             jsonBody.put("refresh_token", refreshToken);
@@ -737,11 +772,66 @@ public class BackgroundService extends Service {
                             .build();
 
             lastRequest = okHttpClient.newCall(request);
-            lastRequest.enqueue(callback);
+            lastRequest.enqueue(accessTokenCallback);
         } catch (JSONException e) {
             Log.e(TAG, "Error sending JSON request for refresh token: " + e.toString());
         }
     }
+
+    private Callback accessTokenCallback = new Callback() {
+
+        @Override
+        public void onFailure(Call call, IOException e) {
+            Log.e(TAG, "Error retrieving access token:" + e.toString());
+            notifyAuthFailed();
+        }
+
+        @Override
+        public void onResponse(Call call, Response response) throws IOException {
+            // TODO: store access and refresh tokens on device
+            try {
+                final JSONObject jsonResponse = new JSONObject(response.body().string());
+                Log.i(TAG, jsonResponse.toString());
+                spotifyExpiresIn = Integer.valueOf(jsonResponse.getString("expires_in"));
+                setSpotifyAccessToken(jsonResponse.getString("access_token"));
+                // refresh 5 minutes before token expiry
+                notifyAuthSuccessful();
+                spotifyTimerHandler.postDelayed(spotifyRefreshTokenTimer,
+                                     (spotifyExpiresIn-5) * 1000);
+            } catch (Exception e) {
+                notifyAuthFailed();
+                Log.e(TAG, "Error parsing/emitting access token: " + e.toString());
+            }
+        }
+    };
+
+    private Callback accessAndRefreshTokenCallback = new Callback() {
+
+        @Override
+        public void onFailure(Call call, IOException e) {
+            Log.e(TAG, "Error retrieving access token:" + e.toString());
+            notifyAuthFailed();
+        }
+
+        @Override
+        public void onResponse(Call call, Response response) throws IOException {
+            // TODO: store access and refresh tokens on device
+            try {
+                final JSONObject jsonResponse = new JSONObject(response.body().string());
+                Log.i(TAG, jsonResponse.toString());
+                spotifyExpiresIn = Integer.valueOf(jsonResponse.getString("expires_in"));
+                setSpotifyRefreshToken(jsonResponse.getString("refresh_token"));
+                setSpotifyAccessToken(jsonResponse.getString("access_token"));
+                // refresh 5 minutes before token expiry
+                notifyAuthSuccessful();
+                spotifyTimerHandler.postDelayed(spotifyRefreshTokenTimer,
+                        (spotifyExpiresIn-5) * 1000);
+            } catch (Exception e) {
+                notifyAuthFailed();
+                Log.e(TAG, "Error parsing/emitting access token: " + e.toString());
+            }
+        }
+    };
 
     private void cancelLastRequest() {
         if (lastRequest != null) {

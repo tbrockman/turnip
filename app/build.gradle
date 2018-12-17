@@ -6,7 +6,7 @@ android {
         applicationId "ca.turnip.turnip"
         minSdkVersion 23
         targetSdkVersion 28
-        versionCode 1
+        versionCode 4
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
@@ -16,7 +16,7 @@ android {
             minifyEnabled false
         }
         release {
-            debuggable false
+            shrinkResources true
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

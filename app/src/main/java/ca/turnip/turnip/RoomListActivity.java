@@ -102,6 +102,7 @@ public class RoomListActivity extends AppCompatActivity {
         roomListSwipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
+                roomListSwipeRefresh.setRefreshing(true);
                 refreshHosts();
             }
         });
@@ -110,13 +111,7 @@ public class RoomListActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (backgroundService != null) {
-            rooms = backgroundService.getDiscoveredHosts();
-            adapter.notifyDataSetChanged();
-            if (!backgroundService.isDiscovering()) {
-                backgroundService.startDiscovery();
-            }
-        }
+        refreshHosts();
     }
 
     @Override

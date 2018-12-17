@@ -13,6 +13,7 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AlertDialog;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.AppCompatImageView;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -36,7 +37,7 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 
-public class RoomActivity extends SpotifyAuthenticatedActivity {
+public class RoomActivity extends BackgroundServiceConnectedActivity {
 
     static final int ADD_SONG_REQUEST = 1;
     private static final String TAG = RoomActivity.class.getSimpleName();
@@ -81,10 +82,10 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
     private String roomName;
     private String roomPassword;
     private Boolean isHost;
-
+    private Boolean spotifyEnabled;
     private String endpointId;
 
-    // Network listener
+    // Jukebox listener
 
     private RoomJukeboxListener roomJukeboxListener =
         new RoomJukeboxListener() {
@@ -157,6 +158,20 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
             }
     };
 
+    // Auth listener
+
+    AuthenticationListener authenticationListener = new AuthenticationListener() {
+        @Override
+        public void onTokenSuccess() {
+
+        }
+
+        @Override
+        public void onTokenFailure() {
+
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -166,10 +181,6 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
             bindRoomActivityConnectionService();
 
             Intent intent = assignIntentVariables();
-
-            if (spotifyEnabled && isHost) {
-                initializeSpotifyAuthentication(intent);
-            }
 
             setTitle(roomName);
 
@@ -230,6 +241,7 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
         if (this.isHost) {
             Log.i(TAG, "Calling onDestroy here");
             backgroundService.stopAdvertising();
+            backgroundService.unsubscribeAuthListener();
         }
         Log.i(TAG, "calling RoomActivity on destroy now");
         backgroundService.unsubscribeRoomJukeboxListener();
@@ -305,7 +317,9 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
                 skipButton.setVisibility(View.GONE);
             }
             else {
-                skipButton.setVisibility(View.VISIBLE);
+                if (isHost) {
+                    skipButton.setVisibility(View.VISIBLE);
+                }
             }
 
             String albumArtUrl = null;
@@ -369,13 +383,6 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
         return String.format(Locale.US, "%01d:%02d", seconds / 60, seconds % 60);
     }
 
-    private void initializeSpotifyAuthentication(Intent intent) {
-        spotifyAccessToken = intent.getStringExtra("spotifyAccessToken");
-        spotifyRefreshToken = intent.getStringExtra("spotifyRefreshToken");
-        spotifyExpiresIn = intent.getIntExtra("spotifyExpiresIn", 60 * 60 * 2);
-        spotifyTimerHandler.postDelayed(spotifyRefreshTokenTimer, 1000);
-    }
-
     private void bindRoomActivityConnectionService() {
         connection = new ServiceConnection() {
 
@@ -388,6 +395,9 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
 
                     if (isHost) {
                         backgroundService.startAdvertising(roomName);
+                        if (spotifyEnabled) {
+                            backgroundService.subscribeAuthListener(authenticationListener);
+                        }
                     }
                     else {
                         backgroundService.connectToRoom(endpointId);
@@ -447,8 +457,6 @@ public class RoomActivity extends SpotifyAuthenticatedActivity {
             i.putExtra("isHost", isHost);
             i.putExtra("roomName", roomName);
             i.putExtra("roomPassword", roomPassword);
-            i.putExtra("spotifyAccessToken", spotifyAccessToken);
-            i.putExtra("spotifyExpiresIn", spotifyExpiresIn);
         } else {
             i = new Intent(this, RoomListActivity.class);
             i.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);

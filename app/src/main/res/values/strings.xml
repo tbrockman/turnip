@@ -31,5 +31,6 @@
     <string name="empty_search_list_header">Find songs to play</string>
     <string name="empty_search_body">Search your favorite songs on Spotify</string>
     <string name="no_results_found">No search results found</string>
-    <string name="no_results_hints">Make sure to only search by either song name, artist, or album.</string>
+    <string name="no_results_hints">We weren\'t able to find any songs, artists, or albums by that name.</string>
+    <string name="ok">OK</string>
 </resources>
