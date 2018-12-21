@@ -128,6 +128,9 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
             }
 
             @Override
+            public void onSpotifyAddedSong(String id) {}
+
+            @Override
             public void onSongTick(int time) {
                 timeElapsed = time;
                 renderCurrentlyPlayingProgress();

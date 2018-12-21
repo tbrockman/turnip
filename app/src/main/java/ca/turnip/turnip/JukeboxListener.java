@@ -7,4 +7,5 @@ interface JukeboxListener {
     void onSongPaused(int timeElapsed);
     void onSongResumed(int timeElapsed);
     void onSongTick(int timeElapsed);
+    void onSpotifyAddedSong(String id);
 }

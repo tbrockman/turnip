@@ -34,7 +34,7 @@ class ServerJukebox extends Jukebox {
     // Server jukebox
     // TODO: implement jukebox with different song apis
     // (i.e bit array indicating spotify/sc/google music/etc.)
-    public ServerJukebox(Context roomActivity, JukeboxListener jukeboxListener) {
+    public ServerJukebox(Context roomActivity, final JukeboxListener jukeboxListener) {
         super(jukeboxListener);
         ConnectionParams connectionParams = new ConnectionParams.Builder(CLIENT_ID)
                                                                 .showAuthView(true)
@@ -57,8 +57,19 @@ class ServerJukebox extends Jukebox {
                                     @Override
                                     public void onEvent(PlayerState playerState) {
 
+                                        setTimeElapsed(Math.round(playerState.playbackPosition / 1000));
+
+                                        String spotifyTrackURI = null;
+                                        String spotifyTrackID = null;
                                         Song current = getCurrentlyPlaying();
-                                        String spotifyTrackURI = playerState.track.uri;
+
+                                        if (playerState != null && playerState.track != null) {
+                                            spotifyTrackURI = playerState.track.uri;
+                                        }
+                                        if (spotifyTrackURI != null) {
+                                            spotifyTrackID = spotifyTrackURI.substring(spotifyTrackURI.lastIndexOf(":") + 1);
+                                        }
+                                        Log.i(TAG, spotifyTrackURI);
                                         // TODO: if spotify starts playing another song
                                         // query it and display it as currently playing
                                         if (current != null &&
@@ -71,7 +82,21 @@ class ServerJukebox extends Jukebox {
                                                     playSong(next);
                                                 }
                                             }
+                                            // We have a current track, but nothing in the queue
+                                            // Show what Spotify is playing
+                                            else {
+                                                Log.i(TAG, "could be playing spotifys song here");
+                                                jukeboxListener.onSpotifyAddedSong(spotifyTrackID);
+                                            }
                                         }
+
+                                        // We don't have a current track
+                                        // But Spotify is playing something
+                                        if (current == null ) {
+                                            Log.i(TAG, "current track is null, play spotify");
+                                            jukeboxListener.onSpotifyAddedSong(spotifyTrackID);
+                                        }
+
                                         if (playerState.isPaused && !wasPaused) {
                                             wasPaused = true;
                                             Log.i(TAG, "pausing:");
@@ -111,6 +136,10 @@ class ServerJukebox extends Jukebox {
         super.enqueueSong(song);
         Log.i(TAG, "enqueuing as server");
         queueSpotify(song.getString("uri"));
+    }
+
+    public void playSongAddedBySpotify(Song song) {
+        super.playSong(song);
     }
 
     public void playSpotify(String uri) {

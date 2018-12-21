@@ -101,8 +101,8 @@ public class Jukebox {
     }
 
     public void setTimeElapsed(int timeElapsed) {
+        this.timeElapsed = timeElapsed;
         if (this.currentlyPlaying != null) {
-            this.timeElapsed = timeElapsed;
             this.currentlyPlaying.setTimeElapsed(timeElapsed);
         }
     }
@@ -137,5 +137,4 @@ public class Jukebox {
     }
 
     private void resetTimer() { pauseTimer(); }
-
 }

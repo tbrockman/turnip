@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.util.Base64;
 import android.util.Log;
@@ -64,13 +65,32 @@ public class BackgroundService extends Service {
     private static final String TAG = BackgroundService.class.getSimpleName();
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
-    // Binder, context, and context variables
+    // Binder, context, and room variables
 
     private final IBinder binder = new LocalBinder();
     private Context context;
     private boolean isHost;
     private boolean inRoom;
     private boolean isDiscovering = false;
+
+    // Handler for running asynchronous code on UI thread
+
+    private Handler enqueueSongHandler = new Handler(Looper.getMainLooper());
+
+    // Runnables
+
+    private class SongQueueRunnable implements Runnable {
+        private Song added;
+
+        public SongQueueRunnable(JSONObject song) {
+            this.added = new SpotifySong(song);
+        }
+
+        @Override
+        public void run() {
+            ((ServerJukebox) jukebox).playSongAddedBySpotify(added);
+        }
+    }
 
     // Network communication
 
@@ -95,8 +115,13 @@ public class BackgroundService extends Service {
     private Runnable spotifyRefreshTokenTimer = new Runnable() {
         @Override
         public void run() {
-            if (spotifyRefreshToken != null) {
+            try {
+                if (spotifyRefreshToken == null) {
+                    spotifyRefreshToken = getStoredSpotifyRefreshToken();
+                }
                 getAccessTokenFromRefreshToken(spotifyRefreshToken);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     };
@@ -136,6 +161,11 @@ public class BackgroundService extends Service {
         @Override
         public void onSongTick(int timeElapsed) {
             notifySongTicked(timeElapsed);
+        }
+
+        @Override
+        public void onSpotifyAddedSong(String id) {
+            getSpotifyUrl("https://api.spotify.com/v1/tracks/" + id, spotifyAddedSong);
         }
     };
 
@@ -501,6 +531,7 @@ public class BackgroundService extends Service {
 
             @Override
             public void onDisconnected(@NonNull String endpointId) {
+                connectedClients.remove(endpointId);
                 Log.i(TAG, "Connection disconnected: " + endpointId);
             }
         };
@@ -619,9 +650,9 @@ public class BackgroundService extends Service {
     }
 
     public void connectToRoom(String endpointId) {
-        // TODO: better naming scheme than hardcoded 'test'
+        // TODO: better naming scheme than hardcoded 'turnip'
         Log.i(TAG, "trying to connect here" + endpointId);
-        Task<Void> result = connectionsClient.requestConnection("abacacacaca", endpointId, clientConnectionLifecycleCallback);
+        Task<Void> result = connectionsClient.requestConnection("turnip", endpointId, clientConnectionLifecycleCallback);
         result.addOnFailureListener(new OnFailureListener() {
             @Override
             public void onFailure(@NonNull Exception e) {
@@ -808,7 +839,7 @@ public class BackgroundService extends Service {
                 // refresh 5 minutes before token expiry
                 notifyAuthSuccessful();
                 spotifyTimerHandler.postDelayed(spotifyRefreshTokenTimer,
-                                     (spotifyExpiresIn-5) * 1000);
+                                     (spotifyExpiresIn-300) * 1000);
             } catch (Exception e) {
                 notifyAuthFailed();
                 Log.e(TAG, "Error parsing/emitting access token: " + e.toString());
@@ -836,10 +867,29 @@ public class BackgroundService extends Service {
                 // refresh 5 minutes before token expiry
                 notifyAuthSuccessful();
                 spotifyTimerHandler.postDelayed(spotifyRefreshTokenTimer,
-                        (spotifyExpiresIn-5) * 1000);
+                                     (spotifyExpiresIn-300) * 1000);
             } catch (Exception e) {
                 notifyAuthFailed();
                 Log.e(TAG, "Error parsing/emitting access token: " + e.toString());
+            }
+        }
+    };
+
+    private Callback spotifyAddedSong = new Callback() {
+
+        @Override
+        public void onFailure(Call call, IOException e) {
+            Log.e(TAG, "Error retrieving Spotify song: " + e.toString());
+        }
+
+        @Override
+        public void onResponse(Call call, Response response) throws IOException {
+            try {
+                final JSONObject jsonResponse = new JSONObject(response.body().string());
+                Log.i(TAG, jsonResponse.toString());
+                enqueueSongHandler.post(new SongQueueRunnable(jsonResponse));
+            } catch (JSONException e) {
+                Log.e(TAG, "Error parsing JSON Spotify song: " + e.toString());
             }
         }
     };
