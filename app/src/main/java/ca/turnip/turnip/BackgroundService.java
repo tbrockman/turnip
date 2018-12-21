@@ -89,6 +89,7 @@ public class BackgroundService extends Service {
         @Override
         public void run() {
             ((ServerJukebox) jukebox).playSongAddedBySpotify(added);
+            emitSongPlaying(connectedClients, added);
         }
     }
 

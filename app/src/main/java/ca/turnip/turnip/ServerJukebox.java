@@ -77,7 +77,7 @@ class ServerJukebox extends Jukebox {
                                             !spotifyTrackURI.equals(current.getString("uri"))) {
                                             Song next = getNextSong();
                                             if (next != null) {
-                                                if (spotifyTrackURI.equals(next.get("uri"))) {
+                                                if (spotifyTrackURI.equals(next.getString("uri"))) {
                                                     ServerJukebox.super.playSong(next);
                                                 } else if (!lock) {
                                                     playSong(next);
