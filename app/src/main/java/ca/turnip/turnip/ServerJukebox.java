@@ -17,7 +17,7 @@ import static ca.turnip.turnip.MainActivity.CLIENT_ID;
 
 class ServerJukebox extends Jukebox {
 
-    private static final String TAG = Jukebox.class.getSimpleName();
+    private static final String TAG = ServerJukebox.class.getSimpleName();
 
     // Spotify integration
     private SpotifyAppRemote spotifyAppRemote;
@@ -57,7 +57,9 @@ class ServerJukebox extends Jukebox {
                                     @Override
                                     public void onEvent(PlayerState playerState) {
 
-                                        setTimeElapsed(Math.round(playerState.playbackPosition / 1000));
+                                        // TODO: emit time change events to all clients
+                                        final int roundedTimeElapsed = Math.round(playerState.playbackPosition / 1000);
+                                        setTimeElapsed(roundedTimeElapsed);
 
                                         String spotifyTrackURI = null;
                                         String spotifyTrackID = null;
@@ -69,10 +71,9 @@ class ServerJukebox extends Jukebox {
                                         if (spotifyTrackURI != null) {
                                             spotifyTrackID = spotifyTrackURI.substring(spotifyTrackURI.lastIndexOf(":") + 1);
                                         }
-                                        Log.i(TAG, spotifyTrackURI);
                                         // TODO: if spotify starts playing another song
                                         // query it and display it as currently playing
-                                        if (current != null &&
+                                        if (current != null && spotifyTrackURI != null &&
                                             !spotifyTrackURI.equals(current.getString("uri"))) {
                                             Song next = getNextSong();
                                             if (next != null) {
@@ -86,7 +87,10 @@ class ServerJukebox extends Jukebox {
                                             // Show what Spotify is playing
                                             else {
                                                 Log.i(TAG, "could be playing spotifys song here");
-                                                jukeboxListener.onSpotifyAddedSong(spotifyTrackID);
+                                                // TODO: implement a lock to prevent calling this
+                                                // multiple times for the same song
+                                                jukeboxListener.onSpotifyAddedSong(spotifyTrackID,
+                                                                                   roundedTimeElapsed);
                                             }
                                         }
 
@@ -94,17 +98,18 @@ class ServerJukebox extends Jukebox {
                                         // But Spotify is playing something
                                         if (current == null ) {
                                             Log.i(TAG, "current track is null, play spotify");
-                                            jukeboxListener.onSpotifyAddedSong(spotifyTrackID);
+                                            jukeboxListener.onSpotifyAddedSong(spotifyTrackID,
+                                                                               roundedTimeElapsed);
                                         }
 
                                         if (playerState.isPaused && !wasPaused) {
                                             wasPaused = true;
                                             Log.i(TAG, "pausing:");
-                                            pauseCurrent(Math.round(playerState.playbackPosition / 1000));
+                                            pauseCurrent(roundedTimeElapsed);
                                         } else if (!playerState.isPaused && wasPaused) {
                                             wasPaused = false;
                                             Log.i(TAG, "unpausing");
-                                            unpauseCurrent(Math.round(playerState.playbackPosition / 1000));
+                                            unpauseCurrent(roundedTimeElapsed);
                                         }
                                     }
                                 })

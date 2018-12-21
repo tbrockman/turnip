@@ -164,8 +164,9 @@ public class BackgroundService extends Service {
         }
 
         @Override
-        public void onSpotifyAddedSong(String id) {
-            getSpotifyUrl("https://api.spotify.com/v1/tracks/" + id, spotifyAddedSong);
+        public void onSpotifyAddedSong(String id, int timeElapsed) {
+            getSpotifyUrl("https://api.spotify.com/v1/tracks/" + id,
+                          new SpotifySongAddedCallback(timeElapsed));
         }
     };
 
@@ -875,7 +876,14 @@ public class BackgroundService extends Service {
         }
     };
 
-    private Callback spotifyAddedSong = new Callback() {
+    private class SpotifySongAddedCallback implements Callback {
+
+        private int timeElapsed;
+
+        public SpotifySongAddedCallback(int timeElapsed) {
+            this.timeElapsed = timeElapsed;
+        }
+
 
         @Override
         public void onFailure(Call call, IOException e) {
@@ -886,13 +894,14 @@ public class BackgroundService extends Service {
         public void onResponse(Call call, Response response) throws IOException {
             try {
                 final JSONObject jsonResponse = new JSONObject(response.body().string());
+                jsonResponse.put("timeElapsed", timeElapsed);
                 Log.i(TAG, jsonResponse.toString());
                 enqueueSongHandler.post(new SongQueueRunnable(jsonResponse));
             } catch (JSONException e) {
                 Log.e(TAG, "Error parsing JSON Spotify song: " + e.toString());
             }
         }
-    };
+    }
 
     private void cancelLastRequest() {
         if (lastRequest != null) {
