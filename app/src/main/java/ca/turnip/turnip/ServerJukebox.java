@@ -36,98 +36,116 @@ class ServerJukebox extends Jukebox {
     // (i.e bit array indicating spotify/sc/google music/etc.)
     public ServerJukebox(Context roomActivity, final JukeboxListener jukeboxListener) {
         super(jukeboxListener);
-        ConnectionParams connectionParams = new ConnectionParams.Builder(CLIENT_ID)
-                                                                .showAuthView(true)
-                                                                .setRedirectUri(APP_REDIRECT_URI)
-                                                                .build();
-
         // TODO: if spotify then ->
-        SpotifyAppRemote.CONNECTOR.connect(roomActivity,
-                                           connectionParams,
-                                       new Connector.ConnectionListener() {
+        connectToSpotify(roomActivity, jukeboxListener);
+    }
 
-            @Override
-            public void onConnected(SpotifyAppRemote remote) {
-                spotifyAppRemote = remote;
-                spotifyAppRemote.getConnectApi().connectSwitchToLocalDevice();
-                spotifyIsConnected = true;
-                spotifyAppRemote.getPlayerApi()
-                                .subscribeToPlayerState()
-                                .setEventCallback(new Subscription.EventCallback<PlayerState>() {
-                                    @Override
-                                    public void onEvent(PlayerState playerState) {
+    private class SpotifyConnectionListener implements Connector.ConnectionListener {
 
-                                        // TODO: emit time change events to all clients
-                                        final int roundedTimeElapsed = Math.round(playerState.playbackPosition / 1000);
-                                        setTimeElapsed(roundedTimeElapsed);
+        private final JukeboxListener jukeboxListener;
+        private Subscription.EventCallback<PlayerState> spotifyEventCallback;
+        private ErrorCallback spotifyErrorCallback;
 
-                                        String spotifyTrackURI = null;
-                                        String spotifyTrackID = null;
-                                        Song current = getCurrentlyPlaying();
+        public SpotifyConnectionListener(final JukeboxListener jukeboxListener) {
+            this.jukeboxListener = jukeboxListener;
+            this.spotifyEventCallback = new Subscription.EventCallback<PlayerState>() {
+                @Override
+                public void onEvent(PlayerState playerState) {
 
-                                        if (playerState != null && playerState.track != null) {
-                                            spotifyTrackURI = playerState.track.uri;
-                                        }
-                                        if (spotifyTrackURI != null) {
-                                            spotifyTrackID = spotifyTrackURI.substring(spotifyTrackURI.lastIndexOf(":") + 1);
-                                        }
-                                        // TODO: if spotify starts playing another song
-                                        // query it and display it as currently playing
-                                        if (current != null && spotifyTrackURI != null &&
-                                            !spotifyTrackURI.equals(current.getString("uri"))) {
-                                            Song next = getNextSong();
-                                            if (next != null) {
-                                                if (spotifyTrackURI.equals(next.getString("uri"))) {
-                                                    ServerJukebox.super.playSong(next);
-                                                } else if (!lock) {
-                                                    playSong(next);
-                                                }
-                                            }
-                                            // We have a current track, but nothing in the queue
-                                            // Show what Spotify is playing
-                                            else {
-                                                Log.i(TAG, "could be playing spotifys song here");
-                                                // TODO: implement a lock to prevent calling this
-                                                // multiple times for the same song
-                                                jukeboxListener.onSpotifyAddedSong(spotifyTrackID,
-                                                                                   roundedTimeElapsed);
-                                            }
-                                        }
+                    // TODO: emit time change events to all clients
+                    final int roundedTimeElapsed = Math.round(playerState.playbackPosition / 1000);
+                    setTimeElapsed(roundedTimeElapsed);
 
-                                        // We don't have a current track
-                                        // But Spotify is playing something
-                                        if (current == null ) {
-                                            Log.i(TAG, "current track is null, play spotify");
-                                            jukeboxListener.onSpotifyAddedSong(spotifyTrackID,
-                                                                               roundedTimeElapsed);
-                                        }
+                    String spotifyTrackURI = null;
+                    String spotifyTrackID = null;
+                    Song current = getCurrentlyPlaying();
 
-                                        if (playerState.isPaused && !wasPaused) {
-                                            wasPaused = true;
-                                            Log.i(TAG, "pausing:");
-                                            pauseCurrent(roundedTimeElapsed);
-                                        } else if (!playerState.isPaused && wasPaused) {
-                                            wasPaused = false;
-                                            Log.i(TAG, "unpausing");
-                                            unpauseCurrent(roundedTimeElapsed);
-                                        }
-                                    }
-                                })
-                                .setErrorCallback(new ErrorCallback() {
-                                    @Override
-                                    public void onError(Throwable throwable) {
-                                        // TODO: spotify remote error get player api handling
-                                        Log.e(TAG, throwable.toString());
-                                    }
-                                });
-            }
+                    if (playerState != null && playerState.track != null) {
+                        spotifyTrackURI = playerState.track.uri;
+                    }
+                    if (spotifyTrackURI != null) {
+                        spotifyTrackID = spotifyTrackURI.substring(spotifyTrackURI.lastIndexOf(":") + 1);
+                    }
+                    // TODO: if spotify starts playing another song
+                    // query it and display it as currently playing
+                    if (current != null && spotifyTrackURI != null &&
+                            !spotifyTrackURI.equals(current.getString("uri"))) {
+                        Song next = getNextSong();
+                        if (next != null) {
+                            if (spotifyTrackURI.equals(next.getString("uri"))) {
+                                ServerJukebox.super.playSong(next);
+                            } else if (!lock) {
+                                playSong(next);
+                            }
+                        }
+                        // We have a current track, but nothing in the queue
+                        // Show what Spotify is playing
+                        else {
+                            Log.i(TAG, "could be playing spotifys song here");
+                            // TODO: implement a lock to prevent calling this
+                            // multiple times for the same song
+                            jukeboxListener.onSpotifyAddedSong(spotifyTrackID,
+                                                               roundedTimeElapsed);
+                        }
+                    }
 
-            @Override
-            public void onFailure(Throwable throwable) {
-                //TODO: spotify remote connection failure handling
-                Log.i(TAG, "failed connection to spotify" + throwable.getMessage());
-            }
-        });
+                    // We don't have a current track
+                    // But Spotify is playing something
+                    if (current == null ) {
+                        Log.i(TAG, "current track is null, play spotify");
+                        jukeboxListener.onSpotifyAddedSong(spotifyTrackID,
+                                                           roundedTimeElapsed);
+                    }
+
+                    if (playerState.isPaused && !wasPaused) {
+                        wasPaused = true;
+                        Log.i(TAG, "pausing:");
+                        pauseCurrent(roundedTimeElapsed);
+                    } else if (!playerState.isPaused && wasPaused) {
+                        wasPaused = false;
+                        Log.i(TAG, "unpausing");
+                        unpauseCurrent(roundedTimeElapsed);
+                    }
+                }
+            };
+
+            this.spotifyErrorCallback = new ErrorCallback() {
+                @Override
+                public void onError(Throwable throwable) {
+                    // TODO: spotify remote error get player api handling
+                    Log.e(TAG, throwable.toString());
+                }
+            };
+        }
+
+        @Override
+        public void onConnected(SpotifyAppRemote remote) {
+            spotifyAppRemote = remote;
+            spotifyIsConnected = true;
+            spotifyAppRemote.getPlayerApi()
+                    .subscribeToPlayerState()
+                    .setEventCallback(spotifyEventCallback)
+                    .setErrorCallback(spotifyErrorCallback);
+        }
+
+        @Override
+        public void onFailure(Throwable throwable) {
+            //TODO: spotify remote connection failure handling
+            Log.i(TAG, "failed connection to spotify" + throwable.getMessage());
+        }
+    }
+
+    public void connectToSpotify(Context roomActivity, final JukeboxListener jukeboxListener) {
+        if (spotifyAppRemote == null || !spotifyAppRemote.isConnected()) {
+            ConnectionParams connectionParams = new ConnectionParams.Builder(CLIENT_ID)
+                                                                    .showAuthView(true)
+                                                                    .setRedirectUri(APP_REDIRECT_URI)
+                                                                    .build();
+
+            SpotifyAppRemote.CONNECTOR.connect(roomActivity,
+                    connectionParams,
+                    new SpotifyConnectionListener(jukeboxListener));
+        }
     }
 
     @Override

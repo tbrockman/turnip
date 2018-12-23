@@ -1,5 +1,6 @@
 package ca.turnip.turnip;
 
+import android.app.Activity;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -201,6 +202,12 @@ public class BackgroundService extends Service {
     }
 
     // Clean-up
+
+    public void onRoomResume(Activity roomActivity) {
+        if (isHost) {
+            ((ServerJukebox) jukebox).connectToSpotify(roomActivity, jukeboxListener);
+        }
+    }
 
     @Override
     public void onDestroy() {
@@ -707,7 +714,6 @@ public class BackgroundService extends Service {
             // while currently sending the queue to another?
             // Max payload size is (allegedly) 32768 bytes, depending on song queue size
             // we may not have a choice
-            // TODO: we can't send bitmaps
             sendSongAdded(endpointId, songQueue.get(i));
         }
     }
@@ -902,6 +908,16 @@ public class BackgroundService extends Service {
                 Log.e(TAG, "Error parsing JSON Spotify song: " + e.toString());
             }
         }
+    }
+
+    // Room Activity jukebox accessing functions
+
+    public ArrayList<Song> getSongQueue() {
+        return jukebox.getSongQueue();
+    }
+
+    public Song getCurrentlyPlaying() {
+        return jukebox.getCurrentlyPlaying();
     }
 
     private void cancelLastRequest() {

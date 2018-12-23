@@ -91,10 +91,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         new RoomJukeboxListener() {
             @Override
             public void onSongAdded(Song song) {
-                songQueue.add(song);
-                adapter.notifyItemInserted(songQueue.size() - 1);
-                renderCurrentlyPlaying();
-                renderSongQueueEmpty();
+                addSongToQueue(song);
             }
 
             @Override
@@ -110,11 +107,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
             @Override
             public void onSongPlaying(Song song) {
-                currentlyPlaying = song;
-                timeElapsed = Integer.parseInt(currentlyPlaying.getString("timeElapsed"));
-                songLength = Integer.parseInt(currentlyPlaying.getString("duration_ms")) / 1000;
-                renderCurrentlyPlaying();
-                renderSongQueueEmpty();
+                setCurrentlyPlaying(song);
             }
 
             @Override
@@ -222,6 +215,16 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        if (backgroundService != null) {
+            backgroundService.onRoomResume(this);
+            setCurrentlyPlaying(backgroundService.getCurrentlyPlaying());
+            setSongQueue(backgroundService.getSongQueue());
+        }
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home:
@@ -314,6 +317,14 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
     // Currently playing
 
+    private void setCurrentlyPlaying(Song song) {
+        currentlyPlaying = song;
+        timeElapsed = Integer.parseInt(currentlyPlaying.getString("timeElapsed"));
+        songLength = Integer.parseInt(currentlyPlaying.getString("duration_ms")) / 1000;
+        renderCurrentlyPlaying();
+        renderSongQueueEmpty();
+    }
+
     private void renderCurrentlyPlaying() {
         if (currentlyPlaying != null) {
             if (songQueue.size() == 0) {
@@ -366,6 +377,21 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         if (songLength > 0) {
             timeProgressBar.setProgress((int) Math.ceil(timeElapsed * 100 / songLength));
         }
+    }
+
+    // Song queue
+
+    private void addSongToQueue(Song song) {
+        songQueue.add(song);
+        adapter.notifyItemInserted(songQueue.size() - 1);
+        renderCurrentlyPlaying();
+        renderSongQueueEmpty();
+    }
+
+    private void setSongQueue(ArrayList<Song> queue) {
+        songQueue = queue;
+        adapter.notifyDataSetChanged();
+        renderSongQueueEmpty();
     }
 
     private void renderSongQueueEmpty() {
