@@ -43,9 +43,11 @@
                         android:id="@+id/roomName"
                         android:layout_width="fill_parent"
                         android:layout_height="wrap_content"
-                        android:maxLines="1"
+                        android:focusableInTouchMode="true"
+                        android:focusedByDefault="true"
+                        android:imeOptions="actionDone"
                         android:inputType="text"
-                        android:imeOptions="actionDone" />
+                        android:maxLines="1" />
                 </android.support.design.widget.TextInputLayout>
 
             </TableRow>

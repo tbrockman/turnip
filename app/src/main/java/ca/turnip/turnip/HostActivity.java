@@ -190,6 +190,9 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
             @Override
             public void afterTextChanged(Editable s) {}
         });
+        roomName.requestFocus();
+        InputMethodManager imm = (InputMethodManager)getSystemService(this.INPUT_METHOD_SERVICE);
+        imm.toggleSoftInput(InputMethodManager.SHOW_FORCED,InputMethodManager.HIDE_IMPLICIT_ONLY);
     }
 
     private void initializeTable() {

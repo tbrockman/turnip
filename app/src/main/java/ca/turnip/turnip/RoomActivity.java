@@ -77,6 +77,10 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
     private ArrayList<Song> songQueue;
 
+    // Activity life cycle
+
+    private boolean wasSearching = false;
+
     // Intent extras
 
     private String roomName;
@@ -218,10 +222,14 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     protected void onResume() {
         super.onResume();
         if (backgroundService != null) {
+            Log.i(TAG, "on room resume called");
             backgroundService.onRoomResume(this);
-            setCurrentlyPlaying(backgroundService.getCurrentlyPlaying());
-            setSongQueue(backgroundService.getSongQueue());
+            if (!wasSearching) {
+                setCurrentlyPlaying(backgroundService.getCurrentlyPlaying());
+                setSongQueue(backgroundService.getSongQueue());
+            }
         }
+        wasSearching = false;
     }
 
     @Override
@@ -389,8 +397,12 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     }
 
     private void setSongQueue(ArrayList<Song> queue) {
-        songQueue = queue;
+        songQueue.clear();
+        for (int i = 0; i < queue.size(); i++) {
+            songQueue.add(queue.get(i));
+        }
         adapter.notifyDataSetChanged();
+        renderCurrentlyPlaying();
         renderSongQueueEmpty();
     }
 
@@ -495,6 +507,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     }
 
     private void startSongAddActivity() {
+        wasSearching = true;
         Intent queueSong = new Intent(this, SongSearchActivity.class);
         startActivityForResult(queueSong, ADD_SONG_REQUEST);
     }

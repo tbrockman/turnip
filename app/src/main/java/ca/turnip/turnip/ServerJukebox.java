@@ -91,7 +91,7 @@ class ServerJukebox extends Jukebox {
 
                     // We don't have a current track
                     // But Spotify is playing something
-                    if (current == null ) {
+                    if (current == null && spotifyTrackURI != null) {
                         Log.i(TAG, "current track is null, play spotify");
                         jukeboxListener.onSpotifyAddedSong(spotifyTrackID,
                                                            roundedTimeElapsed);
@@ -120,23 +120,26 @@ class ServerJukebox extends Jukebox {
 
         @Override
         public void onConnected(SpotifyAppRemote remote) {
+            Log.i(TAG, "succcessfully connected to spotify");
             spotifyAppRemote = remote;
             spotifyIsConnected = true;
             spotifyAppRemote.getPlayerApi()
-                    .subscribeToPlayerState()
-                    .setEventCallback(spotifyEventCallback)
-                    .setErrorCallback(spotifyErrorCallback);
+                            .subscribeToPlayerState()
+                            .setEventCallback(spotifyEventCallback)
+                            .setErrorCallback(spotifyErrorCallback);
         }
 
         @Override
         public void onFailure(Throwable throwable) {
             //TODO: spotify remote connection failure handling
             Log.i(TAG, "failed connection to spotify" + throwable.getMessage());
+            spotifyIsConnected = false;
         }
     }
 
     public void connectToSpotify(Context roomActivity, final JukeboxListener jukeboxListener) {
         if (spotifyAppRemote == null || !spotifyAppRemote.isConnected()) {
+            Log.i(TAG, "re-initiating spotify connection");
             ConnectionParams connectionParams = new ConnectionParams.Builder(CLIENT_ID)
                                                                     .showAuthView(true)
                                                                     .setRedirectUri(APP_REDIRECT_URI)
