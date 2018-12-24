@@ -24,6 +24,7 @@ class ServerJukebox extends Jukebox {
     private boolean spotifyIsConnected = false;
     private boolean wasPaused = false;
     private boolean lock = false;
+    private String spotifyCurrentlyAddedSong = null;
     private CallResult.ResultCallback<Empty> spotifyCallback = new CallResult.ResultCallback<Empty>() {
         @Override
         public void onResult(Empty empty) {
@@ -62,10 +63,11 @@ class ServerJukebox extends Jukebox {
 
                     if (playerState != null && playerState.track != null) {
                         spotifyTrackURI = playerState.track.uri;
+                        if (spotifyTrackURI != null) {
+                            spotifyTrackID = spotifyTrackURI.substring(spotifyTrackURI.lastIndexOf(":") + 1);
+                        }
                     }
-                    if (spotifyTrackURI != null) {
-                        spotifyTrackID = spotifyTrackURI.substring(spotifyTrackURI.lastIndexOf(":") + 1);
-                    }
+
                     // TODO: if spotify starts playing another song
                     // query it and display it as currently playing
                     if (current != null && spotifyTrackURI != null &&
@@ -81,18 +83,24 @@ class ServerJukebox extends Jukebox {
                         // We have a current track, but nothing in the queue
                         // Show what Spotify is playing
                         else {
-                            Log.i(TAG, "could be playing spotifys song here");
                             // TODO: implement a lock to prevent calling this
                             // multiple times for the same song
-                            jukeboxListener.onSpotifyAddedSong(spotifyTrackID,
-                                                               roundedTimeElapsed);
+                            if (!spotifyTrackID.equals(spotifyCurrentlyAddedSong)) {
+                                Log.i(TAG, "could be playing spotifys song here");
+                                spotifyCurrentlyAddedSong = spotifyTrackID;
+                                jukeboxListener.onSpotifyAddedSong(spotifyTrackID,
+                                        roundedTimeElapsed);
+                            }
                         }
                     }
 
                     // We don't have a current track
                     // But Spotify is playing something
-                    if (current == null && spotifyTrackURI != null) {
+                    if (current == null && spotifyTrackURI != null &&
+                        !spotifyTrackID.equals(spotifyCurrentlyAddedSong) &&
+                        !playerState.isPaused) {
                         Log.i(TAG, "current track is null, play spotify");
+                        spotifyCurrentlyAddedSong = spotifyTrackID;
                         jukeboxListener.onSpotifyAddedSong(spotifyTrackID,
                                                            roundedTimeElapsed);
                     }
