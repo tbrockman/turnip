@@ -71,12 +71,13 @@ class ServerJukebox extends Jukebox {
                     // TODO: if spotify starts playing another song
                     // query it and display it as currently playing
                     if (current != null && spotifyTrackURI != null &&
-                            !spotifyTrackURI.equals(current.getString("uri"))) {
+                        !spotifyTrackURI.equals(current.getString("uri"))) {
                         Song next = getNextSong();
                         if (next != null) {
                             if (spotifyTrackURI.equals(next.getString("uri"))) {
                                 ServerJukebox.super.playSong(next);
-                            } else if (!lock) {
+                            }
+                            else if (!lock) {
                                 playSong(next);
                             }
                         }
@@ -89,14 +90,14 @@ class ServerJukebox extends Jukebox {
                                 Log.i(TAG, "could be playing spotifys song here");
                                 spotifyCurrentlyAddedSong = spotifyTrackID;
                                 jukeboxListener.onSpotifyAddedSong(spotifyTrackID,
-                                        roundedTimeElapsed);
+                                                                   roundedTimeElapsed);
                             }
                         }
                     }
 
                     // We don't have a current track
                     // But Spotify is playing something
-                    if (current == null && spotifyTrackURI != null &&
+                    else if (current == null && spotifyTrackURI != null &&
                         !spotifyTrackID.equals(spotifyCurrentlyAddedSong) &&
                         !playerState.isPaused) {
                         Log.i(TAG, "current track is null, play spotify");
@@ -142,6 +143,7 @@ class ServerJukebox extends Jukebox {
             //TODO: spotify remote connection failure handling
             Log.i(TAG, "failed connection to spotify" + throwable.getMessage());
             spotifyIsConnected = false;
+            spotifyAppRemote = null;
         }
     }
 
@@ -161,7 +163,7 @@ class ServerJukebox extends Jukebox {
 
     @Override
     public void playSong(Song song) {
-        super.playSong(song);
+        // super.playSong(song);
         playSpotify(song.getString("uri"));
     }
 

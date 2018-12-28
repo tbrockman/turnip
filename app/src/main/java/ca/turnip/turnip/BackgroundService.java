@@ -66,13 +66,19 @@ public class BackgroundService extends Service {
     private static final String TAG = BackgroundService.class.getSimpleName();
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
-    // Binder, context, and room variables
+    // Binder, context
 
     private final IBinder binder = new LocalBinder();
     private Context context;
+
+    // Room state information
+
     private boolean isHost;
     private boolean inRoom;
     private boolean isDiscovering = false;
+    private boolean spotifyEnabled = false;
+    private JSONObject roomInfo = null;
+    private int serverVersionCode;
 
     // Handler for running asynchronous code on UI thread
 
@@ -199,6 +205,10 @@ public class BackgroundService extends Service {
         else {
             jukebox = new Jukebox(jukeboxListener);
         }
+    }
+
+    public void setRoomInfo(JSONObject roomInfo) {
+        this.roomInfo = roomInfo;
     }
 
     // Clean-up
@@ -421,6 +431,9 @@ public class BackgroundService extends Service {
                             Song song = new SpotifySong(jsonSong);
                             enqueueSong(song);
                             break;
+                        // Someone is attempting to authenticate with the server
+                        case "pass":
+                            break;
                         default:
                             break;
                     }
@@ -461,6 +474,19 @@ public class BackgroundService extends Service {
                             notifyConnected(); // TODO: this shouldn't be called here
                                                 // should have an actual way of knowing when a connection
                                                 // has been established and all initial data has been transferred
+                            break;
+                        // Room info on start-up, tells us if we need to send the server a password
+                        case "inf":
+                            stringPayload = raw.substring(4);
+                            roomInfo = new JSONObject(stringPayload);
+
+                            if (roomInfo.getBoolean("password")) {
+                                // TODO: send passsword
+                            }
+
+                            serverVersionCode = roomInfo.getInt("app_version");
+                            spotifyEnabled = roomInfo.getBoolean("spotifyEnabled");
+                            Log.i(TAG, roomInfo.toString());
                             break;
                         // Someone has added a new song to the queue
                         case "add":
@@ -531,6 +557,7 @@ public class BackgroundService extends Service {
                                            @NonNull ConnectionResolution connectionResolution) {
                 Log.i(TAG, "Finished accepting connection from: " + endpointId);
                 connectedClients.add(endpointId);
+                sendCurrentRoomInformation(endpointId);
                 sendCurrentlyPlaying(endpointId, jukebox.getCurrentlyPlaying());
                 sendSpotifyToken(endpointId, spotifyAccessToken);
                 if (jukebox.getSongQueueLength() > 0) {
@@ -672,6 +699,13 @@ public class BackgroundService extends Service {
 
     public ArrayList<Endpoint> getDiscoveredHosts() {
         return this.discoveredHosts;
+    }
+
+    private void sendCurrentRoomInformation(String endpointId) {
+        if (roomInfo != null) {
+            String payload = "inf " + roomInfo.toString();
+            sendPayload(endpointId, Payload.fromBytes(payload.getBytes()));
+        }
     }
 
     private void sendCurrentlyPlaying(String endpointId, Song song) {

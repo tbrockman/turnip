@@ -6,6 +6,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.IBinder;
@@ -45,6 +47,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     // Context
 
     Context context = this;
+    Intent hostActivityIntent;
 
     // UI elements
 
@@ -180,7 +183,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         if (savedInstanceState == null) {
             bindRoomActivityConnectionService();
 
-            Intent intent = assignIntentVariables();
+            hostActivityIntent = assignIntentVariables();
 
             setTitle(roomName);
 
@@ -246,20 +249,20 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     public void onBackPressed () {
         // TODO: display toast confirming navigation away
         dialog.show();
-
     }
-
 
     @Override
     public void onDestroy() {
-        if (this.isHost) {
-            Log.i(TAG, "Calling onDestroy here");
-            backgroundService.stopAdvertising();
-            backgroundService.unsubscribeAuthListener();
+        if (isFinishing()) {
+            if (this.isHost) {
+                Log.i(TAG, "Calling onDestroy here");
+                backgroundService.stopAdvertising();
+                backgroundService.unsubscribeAuthListener();
+            }
+            Log.i(TAG, "calling RoomActivity on destroy now");
+            backgroundService.unsubscribeRoomJukeboxListener();
+            backgroundService.destroyRoom();
         }
-        Log.i(TAG, "calling RoomActivity on destroy now");
-        backgroundService.unsubscribeRoomJukeboxListener();
-        backgroundService.destroyRoom();
         unbindService(connection);
         super.onDestroy();
     }
@@ -436,6 +439,12 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
                     if (isHost) {
                         backgroundService.startAdvertising(roomName);
+                        try {
+                            backgroundService.setRoomInfo(getCurrentRoomInfo());
+                        } catch (JSONException e) {
+                            // TODO: handle this error properly
+                            e.printStackTrace();
+                        }
                         if (spotifyEnabled) {
                             backgroundService.subscribeAuthListener(authenticationListener);
                         }
@@ -510,5 +519,26 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         wasSearching = true;
         Intent queueSong = new Intent(this, SongSearchActivity.class);
         startActivityForResult(queueSong, ADD_SONG_REQUEST);
+    }
+
+    private JSONObject getCurrentRoomInfo() throws JSONException {
+        JSONObject roomInfo = new JSONObject();
+        PackageInfo pInfo = null;
+
+        try {
+            pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        if (pInfo != null) {
+            roomInfo.put("app_version", pInfo.versionCode);
+        }
+
+        roomInfo.put("passwordProtected", roomPassword != null);
+        roomInfo.put("name", roomName);
+        roomInfo.put("spotifyEnabled", spotifyEnabled);
+
+        return roomInfo;
     }
 }

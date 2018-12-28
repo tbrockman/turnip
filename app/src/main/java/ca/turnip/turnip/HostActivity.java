@@ -69,6 +69,8 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        spotifySwitch.setChecked(false);
+        spotifyEnabled = false;
     }
 
     @Override
