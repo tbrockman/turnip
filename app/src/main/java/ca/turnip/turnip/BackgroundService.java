@@ -215,7 +215,7 @@ public class BackgroundService extends Service {
 
     public void onRoomResume(Activity roomActivity) {
         if (isHost) {
-            ((ServerJukebox) jukebox).connectToSpotify(roomActivity, jukeboxListener);
+            ((ServerJukebox) jukebox).connectToSpotify(roomActivity);
         }
     }
 
@@ -253,7 +253,7 @@ public class BackgroundService extends Service {
     }
 
     private void notifyHostFound(Endpoint host) {
-        Log.i(TAG, host.toString());
+        Log.d(TAG, host.toString());
         if (roomListListener != null) {
             roomListListener.onRoomFound(host);
         }
@@ -480,13 +480,13 @@ public class BackgroundService extends Service {
                             stringPayload = raw.substring(4);
                             roomInfo = new JSONObject(stringPayload);
 
-                            if (roomInfo.getBoolean("password")) {
+                            if (roomInfo.getBoolean("passwordProtected")) {
                                 // TODO: send passsword
                             }
 
                             serverVersionCode = roomInfo.getInt("app_version");
                             spotifyEnabled = roomInfo.getBoolean("spotifyEnabled");
-                            Log.i(TAG, roomInfo.toString());
+                            Log.d(TAG, roomInfo.toString());
                             break;
                         // Someone has added a new song to the queue
                         case "add":
@@ -526,7 +526,7 @@ public class BackgroundService extends Service {
                 catch (JSONException e) {
                     e.printStackTrace();
                 }
-                Log.i(TAG, "Payload received: " + raw);
+                Log.d(TAG, "Payload received: " + raw);
             } catch (Exception e) {
                 Log.e(TAG, "Invalid length payload." +  e.toString());
             }
@@ -547,7 +547,7 @@ public class BackgroundService extends Service {
             @Override
             public void onConnectionInitiated(@NonNull String endpointId,
                                               @NonNull ConnectionInfo connectionInfo) {
-                Log.i(TAG, "Accepting connection from: " + endpointId);
+                Log.d(TAG, "Accepting connection from: " + endpointId);
                 Nearby.getConnectionsClient(context).acceptConnection(endpointId,
                                                                       serverPayloadCallback);
             }
@@ -555,7 +555,7 @@ public class BackgroundService extends Service {
             @Override
             public void onConnectionResult(@NonNull String endpointId,
                                            @NonNull ConnectionResolution connectionResolution) {
-                Log.i(TAG, "Finished accepting connection from: " + endpointId);
+                Log.d(TAG, "Finished accepting connection from: " + endpointId);
                 connectedClients.add(endpointId);
                 sendCurrentRoomInformation(endpointId);
                 sendCurrentlyPlaying(endpointId, jukebox.getCurrentlyPlaying());
@@ -568,7 +568,7 @@ public class BackgroundService extends Service {
             @Override
             public void onDisconnected(@NonNull String endpointId) {
                 connectedClients.remove(endpointId);
-                Log.i(TAG, "Connection disconnected: " + endpointId);
+                Log.d(TAG, "Connection disconnected: " + endpointId);
             }
         };
 
@@ -580,7 +580,7 @@ public class BackgroundService extends Service {
             @Override
             public void onConnectionInitiated(@NonNull String endpointId,
                                               @NonNull ConnectionInfo connectionInfo) {
-                Log.i(TAG, "Accepting connection from: " + endpointId);
+                Log.d(TAG, "Accepting connection from: " + endpointId);
                 Nearby.getConnectionsClient(context)
                       .acceptConnection(endpointId, clientPayloadCallback);
             }
@@ -588,14 +588,14 @@ public class BackgroundService extends Service {
             @Override
             public void onConnectionResult(@NonNull String endpointId,
                                            @NonNull ConnectionResolution connectionResolution) {
-                Log.i(TAG, "Finished accepting connection from: " + endpointId);
+                Log.d(TAG, "Finished accepting connection from: " + endpointId);
                 serverEndpoint = endpointId;
                 stopDiscovery();
             }
 
             @Override
             public void onDisconnected(@NonNull String endpointId) {
-                Log.i(TAG, "Connection disconnected: " + endpointId);
+                Log.d(TAG, "Connection disconnected: " + endpointId);
                 notifyDisconnected();
             }
         };
@@ -626,7 +626,7 @@ public class BackgroundService extends Service {
         };
 
     public void startAdvertising(final String roomName) {
-        Log.i(TAG, "Advertising");
+        Log.d(TAG, "Advertising");
         connectionsClient
             .startAdvertising(
                 roomName,
@@ -637,7 +637,7 @@ public class BackgroundService extends Service {
                 new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void unusedResult) {
-                    Log.i(TAG, "Now advertising endpoint " + roomName);
+                    Log.d(TAG, "Now advertising endpoint " + roomName);
                     }
                 })
             .addOnFailureListener(
@@ -671,7 +671,7 @@ public class BackgroundService extends Service {
                     @Override
                     public void onFailure(@NonNull Exception e) {
                     // We were unable to start discovering.
-                    Log.i(TAG, "Failed discovery...", e);
+                    Log.d(TAG, "Failed discovery...", e);
                     }
                 });
     }
@@ -687,7 +687,7 @@ public class BackgroundService extends Service {
 
     public void connectToRoom(String endpointId) {
         // TODO: better naming scheme than hardcoded 'turnip'
-        Log.i(TAG, "trying to connect here" + endpointId);
+        Log.d(TAG, "trying to connect here" + endpointId);
         Task<Void> result = connectionsClient.requestConnection("turnip", endpointId, clientConnectionLifecycleCallback);
         result.addOnFailureListener(new OnFailureListener() {
             @Override
@@ -731,7 +731,7 @@ public class BackgroundService extends Service {
                 emitSongAdded(connectedClients, song);
             }
             else {
-                Log.i(TAG, "we playing?");
+                Log.d(TAG, "we playing?");
                 jukebox.playSong(song);
             }
         }
@@ -827,7 +827,7 @@ public class BackgroundService extends Service {
             JSONObject jsonBody = new JSONObject();
             jsonBody.put("authorization_code", authorizationCode);
             jsonBody.put("grant_type", "authorization_code");
-            Log.i(TAG, jsonBody.toString());
+            Log.d(TAG, jsonBody.toString());
             RequestBody body = RequestBody.create(JSON, jsonBody.toString());
             final Request request =
                     new Request.Builder()
@@ -847,7 +847,7 @@ public class BackgroundService extends Service {
             JSONObject jsonBody = new JSONObject();
             jsonBody.put("refresh_token", refreshToken);
             jsonBody.put("grant_type", "refresh_token");
-            Log.i(TAG, jsonBody.toString());
+            Log.d(TAG, jsonBody.toString());
             RequestBody body = RequestBody.create(JSON, jsonBody.toString());
             final Request request =
                     new Request.Builder()
@@ -875,7 +875,7 @@ public class BackgroundService extends Service {
             // TODO: store access and refresh tokens on device
             try {
                 final JSONObject jsonResponse = new JSONObject(response.body().string());
-                Log.i(TAG, jsonResponse.toString());
+                Log.d(TAG, jsonResponse.toString());
                 spotifyExpiresIn = Integer.valueOf(jsonResponse.getString("expires_in"));
                 setSpotifyAccessToken(jsonResponse.getString("access_token"));
                 // refresh 5 minutes before token expiry
@@ -902,7 +902,7 @@ public class BackgroundService extends Service {
             // TODO: store access and refresh tokens on device
             try {
                 final JSONObject jsonResponse = new JSONObject(response.body().string());
-                Log.i(TAG, jsonResponse.toString());
+                Log.d(TAG, jsonResponse.toString());
                 spotifyExpiresIn = Integer.valueOf(jsonResponse.getString("expires_in"));
                 setSpotifyRefreshToken(jsonResponse.getString("refresh_token"));
                 setSpotifyAccessToken(jsonResponse.getString("access_token"));
@@ -936,7 +936,7 @@ public class BackgroundService extends Service {
             try {
                 final JSONObject jsonResponse = new JSONObject(response.body().string());
                 jsonResponse.put("timeElapsed", timeElapsed);
-                Log.i(TAG, jsonResponse.toString());
+                Log.d(TAG, jsonResponse.toString());
                 enqueueSongHandler.post(new SongQueueRunnable(jsonResponse));
             } catch (JSONException e) {
                 Log.e(TAG, "Error parsing JSON Spotify song: " + e.toString());

@@ -78,7 +78,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == AUTH_CODE_REQUEST_CODE) {
             final AuthenticationResponse response = AuthenticationClient.getResponse(resultCode, data);
-            Log.i(TAG, "code:" + String.valueOf(resultCode) + "data:" + data.toString());
+            Log.d(TAG, "code:" + String.valueOf(resultCode) + "data:" + data.toString());
 
             switch (response.getType()) {
                 // did we get the code we requested
@@ -287,7 +287,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
 
             @Override
             public void onServiceDisconnected(ComponentName name) {
-                Log.i(TAG, "disconnected from service");
+                Log.d(TAG, "disconnected from service");
                 backgroundService = null;
             }
         };

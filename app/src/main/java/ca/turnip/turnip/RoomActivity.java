@@ -28,6 +28,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.squareup.picasso.Callback;
 import com.squareup.picasso.Picasso;
@@ -41,8 +42,12 @@ import java.util.Locale;
 
 public class RoomActivity extends BackgroundServiceConnectedActivity {
 
-    static final int ADD_SONG_REQUEST = 1;
     private static final String TAG = RoomActivity.class.getSimpleName();
+
+    // Constants
+
+    static final int ADD_SONG_REQUEST = 1;
+    static final CharSequence connectingToastText = "Connecting to host";
 
     // Context
 
@@ -53,12 +58,13 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
     private AlertDialog dialog;
     private FloatingActionButton fab;
+    private FrameLayout loadingRoomSpinnerLayout;
     private LinearLayoutManager layoutManager;
     private LinearLayout noSongsContainer;
     private LinearLayout currentSongContainer;
     private RecyclerView recyclerView;
     private SongQueueAdapter adapter;
-    private FrameLayout loadingRoomSpinnerLayout;
+    private Toast connectingToast;
 
     // Currently playing
 
@@ -139,6 +145,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
             //TODO: implement network method for pause/resume song
             @Override
             public void onConnect() {
+                connectingToast.cancel();
                 renderSongQueueEmpty();
             }
 
@@ -210,6 +217,10 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
             createLeaveRoomConfirmationDialog();
 
+            if (!isHost) {
+                createConnectingToast();
+            }
+
             songQueue = new ArrayList();
             layoutManager = new LinearLayoutManager(this);
             adapter = new SongQueueAdapter(songQueue, this);
@@ -225,7 +236,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     protected void onResume() {
         super.onResume();
         if (backgroundService != null) {
-            Log.i(TAG, "on room resume called");
+            Log.d(TAG, "on room resume called");
             backgroundService.onRoomResume(this);
             if (!wasSearching) {
                 setCurrentlyPlaying(backgroundService.getCurrentlyPlaying());
@@ -255,11 +266,11 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     public void onDestroy() {
         if (isFinishing()) {
             if (this.isHost) {
-                Log.i(TAG, "Calling onDestroy here");
+                Log.d(TAG, "Calling onDestroy here");
                 backgroundService.stopAdvertising();
                 backgroundService.unsubscribeAuthListener();
             }
-            Log.i(TAG, "calling RoomActivity on destroy now");
+            Log.d(TAG, "calling RoomActivity on destroy now");
             backgroundService.unsubscribeRoomJukeboxListener();
             backgroundService.destroyRoom();
         }
@@ -326,12 +337,21 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         dialog = builder.create();
     }
 
+    // Connecting Toast
+
+    private void createConnectingToast() {
+        connectingToast = Toast.makeText(this, connectingToastText, Toast.LENGTH_LONG );
+        connectingToast.show();
+    }
+
     // Currently playing
 
     private void setCurrentlyPlaying(Song song) {
-        currentlyPlaying = song;
-        timeElapsed = Integer.parseInt(currentlyPlaying.getString("timeElapsed"));
-        songLength = Integer.parseInt(currentlyPlaying.getString("duration_ms")) / 1000;
+        if (song != null) {
+            currentlyPlaying = song;
+            timeElapsed = Integer.parseInt(currentlyPlaying.getString("timeElapsed"));
+            songLength = Integer.parseInt(currentlyPlaying.getString("duration_ms")) / 1000;
+        }
         renderCurrentlyPlaying();
         renderSongQueueEmpty();
     }

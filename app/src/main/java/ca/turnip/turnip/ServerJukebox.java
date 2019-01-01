@@ -1,5 +1,7 @@
 package ca.turnip.turnip;
 
+import android.app.Activity;
+import android.app.ActivityManager;
 import android.content.Context;
 import android.util.Log;
 
@@ -19,12 +21,19 @@ class ServerJukebox extends Jukebox {
 
     private static final String TAG = ServerJukebox.class.getSimpleName();
 
+    private JukeboxListener jukeboxListener = null;
+
     // Spotify integration
     private SpotifyAppRemote spotifyAppRemote;
-    private boolean spotifyIsConnected = false;
-    private boolean wasPaused = false;
-    private boolean lock = false;
+    private Context roomContext;
+    private SpotifyConnectionListener spotifyConnectionListener = null;
+    private Subscription<PlayerState> playerStateSubscription = null;
     private String spotifyCurrentlyAddedSong = null;
+    private boolean spotifyIsConnected = false;
+
+    private boolean wasPaused = false;
+    private boolean skippedLastSong = false;
+    private boolean lock = false;
     private CallResult.ResultCallback<Empty> spotifyCallback = new CallResult.ResultCallback<Empty>() {
         @Override
         public void onResult(Empty empty) {
@@ -35,20 +44,21 @@ class ServerJukebox extends Jukebox {
     // Server jukebox
     // TODO: implement jukebox with different song apis
     // (i.e bit array indicating spotify/sc/google music/etc.)
-    public ServerJukebox(Context roomActivity, final JukeboxListener jukeboxListener) {
+    public ServerJukebox(Context roomActivity, JukeboxListener jukeboxListener) {
         super(jukeboxListener);
         // TODO: if spotify then ->
-        connectToSpotify(roomActivity, jukeboxListener);
+        this.roomContext = roomActivity;
+        this.jukeboxListener = jukeboxListener;
+        connectToSpotify(roomActivity);
     }
 
     private class SpotifyConnectionListener implements Connector.ConnectionListener {
 
-        private final JukeboxListener jukeboxListener;
+
         private Subscription.EventCallback<PlayerState> spotifyEventCallback;
         private ErrorCallback spotifyErrorCallback;
 
-        public SpotifyConnectionListener(final JukeboxListener jukeboxListener) {
-            this.jukeboxListener = jukeboxListener;
+        public SpotifyConnectionListener() {
             this.spotifyEventCallback = new Subscription.EventCallback<PlayerState>() {
                 @Override
                 public void onEvent(PlayerState playerState) {
@@ -87,7 +97,7 @@ class ServerJukebox extends Jukebox {
                             // TODO: implement a lock to prevent calling this
                             // multiple times for the same song
                             if (!spotifyTrackID.equals(spotifyCurrentlyAddedSong)) {
-                                Log.i(TAG, "could be playing spotifys song here");
+                                Log.d(TAG, "could be playing spotifys song here");
                                 spotifyCurrentlyAddedSong = spotifyTrackID;
                                 jukeboxListener.onSpotifyAddedSong(spotifyTrackID,
                                                                    roundedTimeElapsed);
@@ -100,7 +110,7 @@ class ServerJukebox extends Jukebox {
                     else if (current == null && spotifyTrackURI != null &&
                         !spotifyTrackID.equals(spotifyCurrentlyAddedSong) &&
                         !playerState.isPaused) {
-                        Log.i(TAG, "current track is null, play spotify");
+                        Log.d(TAG, "current track is null, play spotify");
                         spotifyCurrentlyAddedSong = spotifyTrackID;
                         jukeboxListener.onSpotifyAddedSong(spotifyTrackID,
                                                            roundedTimeElapsed);
@@ -108,13 +118,15 @@ class ServerJukebox extends Jukebox {
 
                     if (playerState.isPaused && !wasPaused) {
                         wasPaused = true;
-                        Log.i(TAG, "pausing:");
+                        Log.d(TAG, "pausing:");
                         pauseCurrent(roundedTimeElapsed);
                     } else if (!playerState.isPaused && wasPaused) {
                         wasPaused = false;
-                        Log.i(TAG, "unpausing");
+                        Log.d(TAG, "unpausing");
                         unpauseCurrent(roundedTimeElapsed);
                     }
+
+                    skippedLastSong = false;
                 }
             };
 
@@ -129,35 +141,43 @@ class ServerJukebox extends Jukebox {
 
         @Override
         public void onConnected(SpotifyAppRemote remote) {
-            Log.i(TAG, "succcessfully connected to spotify");
+            Log.d(TAG, "succcessfully connected to spotify");
             spotifyAppRemote = remote;
             spotifyIsConnected = true;
-            spotifyAppRemote.getPlayerApi()
-                            .subscribeToPlayerState()
-                            .setEventCallback(spotifyEventCallback)
-                            .setErrorCallback(spotifyErrorCallback);
+            if (playerStateSubscription != null) {
+                playerStateSubscription.cancel();
+            }
+            playerStateSubscription = spotifyAppRemote.getPlayerApi()
+                                                      .subscribeToPlayerState();
+            playerStateSubscription.setEventCallback(spotifyEventCallback)
+                                   .setErrorCallback(spotifyErrorCallback);
         }
 
         @Override
         public void onFailure(Throwable throwable) {
             //TODO: spotify remote connection failure handling
-            Log.i(TAG, "failed connection to spotify" + throwable.getMessage());
+            Log.d(TAG, "failed connection to spotify" + throwable.getMessage());
             spotifyIsConnected = false;
             spotifyAppRemote = null;
+            playerStateSubscription.cancel();
         }
     }
 
-    public void connectToSpotify(Context roomActivity, final JukeboxListener jukeboxListener) {
+    public void connectToSpotify(Context roomActivity) {
         if (spotifyAppRemote == null || !spotifyAppRemote.isConnected()) {
-            Log.i(TAG, "re-initiating spotify connection");
+            Log.d(TAG, "re-initiating spotify connection");
             ConnectionParams connectionParams = new ConnectionParams.Builder(CLIENT_ID)
                                                                     .showAuthView(true)
                                                                     .setRedirectUri(APP_REDIRECT_URI)
                                                                     .build();
+            SpotifyAppRemote.CONNECTOR.disconnect(spotifyAppRemote);
 
+            if (spotifyConnectionListener == null) {
+                spotifyConnectionListener = new SpotifyConnectionListener();
+            }
             SpotifyAppRemote.CONNECTOR.connect(roomActivity,
-                    connectionParams,
-                    new SpotifyConnectionListener(jukeboxListener));
+                                               connectionParams,
+                                               spotifyConnectionListener);
         }
     }
 
@@ -170,7 +190,7 @@ class ServerJukebox extends Jukebox {
     @Override
     public void enqueueSong(Song song) {
         super.enqueueSong(song);
-        Log.i(TAG, "enqueuing as server");
+        Log.d(TAG, "enqueuing as server");
         queueSpotify(song.getString("uri"));
     }
 
@@ -183,6 +203,13 @@ class ServerJukebox extends Jukebox {
             lock = true;
             CallResult<Empty> result = spotifyAppRemote.getPlayerApi().play(uri);
             result.setResultCallback(spotifyCallback);
+            result.setErrorCallback(new ErrorCallback() {
+                @Override
+                public void onError(Throwable throwable) {
+                    Log.e(TAG, throwable.toString());
+                    connectToSpotify(roomContext);
+                }
+            });
         }
     }
 
@@ -190,6 +217,13 @@ class ServerJukebox extends Jukebox {
         if (spotifyIsConnected) {
             CallResult<Empty> result = spotifyAppRemote.getPlayerApi().queue(uri);
             result.setResultCallback(spotifyCallback);
+            result.setErrorCallback(new ErrorCallback() {
+                @Override
+                public void onError(Throwable throwable) {
+                    Log.e(TAG, throwable.toString());
+                    connectToSpotify(roomContext);
+                }
+            });
         }
     }
 
@@ -197,11 +231,19 @@ class ServerJukebox extends Jukebox {
         if (spotifyIsConnected) {
             CallResult<Empty> result = spotifyAppRemote.getPlayerApi().skipNext();
             result.setResultCallback(spotifyCallback);
+            result.setErrorCallback(new ErrorCallback() {
+                @Override
+                public void onError(Throwable throwable) {
+                    Log.e(TAG, throwable.toString());
+                    connectToSpotify(roomContext);
+                }
+            });
         }
     }
 
     @Override
     public void playNextSong() {
+        skippedLastSong = true;
         skipSpotify();
 //        super.playNextSong();
 //        Song next = getNextSong();

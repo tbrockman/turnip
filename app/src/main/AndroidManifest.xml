@@ -45,7 +45,7 @@
             android:configChanges="orientation|keyboardHidden|screenSize"/>
         <activity
             android:name=".RoomListActivity"
-            android:label="Rooms"
+            android:label="Join"
             android:parentActivityName=".MainActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:theme="@style/AppActionBarActivityTheme" />

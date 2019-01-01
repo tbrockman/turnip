@@ -283,7 +283,7 @@ public class SongSearchActivity extends AppCompatActivity {
                         for (int i = 0; i < jsonArray.length(); i++) {
                             Song song = new SpotifySong(jsonArray.getJSONObject(i));
                             songs.add(song);
-                            Log.i(TAG, song.getString("name"));
+                            Log.d(TAG, song.getString("name"));
                         }
 
                         if (newSearch && songs.size() == 0) {
