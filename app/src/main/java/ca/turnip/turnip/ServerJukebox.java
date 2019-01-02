@@ -32,7 +32,6 @@ class ServerJukebox extends Jukebox {
     private boolean spotifyIsConnected = false;
 
     private boolean wasPaused = false;
-    private boolean skippedLastSong = false;
     private boolean lock = false;
     private CallResult.ResultCallback<Empty> spotifyCallback = new CallResult.ResultCallback<Empty>() {
         @Override
@@ -64,6 +63,7 @@ class ServerJukebox extends Jukebox {
                 public void onEvent(PlayerState playerState) {
 
                     // TODO: emit time change events to all clients
+                    final int lastTimeElapsed = getTimeElapsed();
                     final int roundedTimeElapsed = Math.round(playerState.playbackPosition / 1000);
                     setTimeElapsed(roundedTimeElapsed);
 
@@ -78,8 +78,6 @@ class ServerJukebox extends Jukebox {
                         }
                     }
 
-                    // TODO: if spotify starts playing another song
-                    // query it and display it as currently playing
                     if (current != null && spotifyTrackURI != null &&
                         !spotifyTrackURI.equals(current.getString("uri"))) {
                         Song next = getNextSong();
@@ -104,9 +102,24 @@ class ServerJukebox extends Jukebox {
                             }
                         }
                     }
-
+                    // Following code handles the case where we have two of the same songs in a row
+                    // which can cause the next song to never be played (because we see that
+                    // spotify song == current and don't try to play the next song)
+                    // If current == next song == spotify song && last timestamp > current timestamp
+                    // Assume we should be playing the next song
+                    // Might not be true in the case that someone is messing around with playback position
+                    // in Spotify, but this is the easiest way to handle this edge-case while still using
+                    // the Spotify queue and being able to force Turnip queue songs when queues disagree
+                    else if (current != null && spotifyTrackURI != null &&
+                            spotifyTrackURI.equals(current.getString("uri"))) {
+                        Song next = getNextSong();
+                        if (next != null && spotifyTrackURI.equals(next.getString("uri"))
+                                         && lastTimeElapsed > roundedTimeElapsed) {
+                            ServerJukebox.super.playSong(next);
+                        }
+                    }
                     // We don't have a current track
-                    // But Spotify is playing something
+                    // But Spotify is playing something, just play Spotify track
                     else if (current == null && spotifyTrackURI != null &&
                         !spotifyTrackID.equals(spotifyCurrentlyAddedSong) &&
                         !playerState.isPaused) {
@@ -125,8 +138,6 @@ class ServerJukebox extends Jukebox {
                         Log.d(TAG, "unpausing");
                         unpauseCurrent(roundedTimeElapsed);
                     }
-
-                    skippedLastSong = false;
                 }
             };
 
@@ -243,7 +254,6 @@ class ServerJukebox extends Jukebox {
 
     @Override
     public void playNextSong() {
-        skippedLastSong = true;
         skipSpotify();
 //        super.playNextSong();
 //        Song next = getNextSong();
