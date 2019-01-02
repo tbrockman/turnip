@@ -219,11 +219,11 @@ public class BackgroundService extends Service {
         }
     }
 
-    @Override
-    public void onDestroy() {
-        destroyRoom();
-        super.onDestroy();
-    }
+//    @Override
+//    public void onDestroy() {
+//        destroyRoom();
+//        super.onDestroy();
+//    }
 
     public void destroyRoom() {
         cancelLastRequest();
