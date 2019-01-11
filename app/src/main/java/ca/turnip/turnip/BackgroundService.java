@@ -197,6 +197,12 @@ public class BackgroundService extends Service {
         return binder;
     }
 
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        Log.d(TAG, "Removing service.");
+        stopSelf();
+    }
+
     public void setUpJukebox(boolean isHost) {
         this.isHost = isHost;
         if (isHost) {
@@ -219,21 +225,29 @@ public class BackgroundService extends Service {
         }
     }
 
-//    @Override
-//    public void onDestroy() {
-//        destroyRoom();
-//        super.onDestroy();
-//    }
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, "Destroying BackgroundService");
+        destroyRoom();
+    }
 
     public void destroyRoom() {
         cancelLastRequest();
+        if (connectionsClient != null) {
+            if (isHost) {
+                connectionsClient.stopAllEndpoints();
+            }
+            else {
+                connectionsClient.disconnectFromEndpoint(serverEndpoint);
+            }
+        }
+
         if (isHost) {
             spotifyTimerHandler.removeCallbacks(spotifyRefreshTokenTimer);
-            connectionsClient.stopAllEndpoints();
-        } else {
-            connectionsClient.disconnectFromEndpoint(serverEndpoint);
+            connectedClients.clear();
         }
-        connectedClients.clear();
+
         if (jukebox != null) {
             jukebox.turnOff();
         }

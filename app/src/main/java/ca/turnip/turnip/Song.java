@@ -27,7 +27,12 @@ public abstract class Song {
     abstract boolean has(String key);
     abstract JSONArray getArray(String key);
     abstract void setTimeElapsed(int timeElapsed);
-    abstract String getAlbumArtURL() throws JSONException;
+    abstract String getAlbumName();
+    abstract String getAlbumArtURL(String size) throws JSONException;
     abstract ArrayList<String> getArtists();
+    abstract String getArtistsAsString();
     abstract String getSongType();
+    abstract String getSongTitle();
+    abstract String getSongTypeName();
+    abstract String getExternalLink();
 }

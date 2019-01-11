@@ -181,14 +181,14 @@ class ServerJukebox extends Jukebox {
                                                                     .showAuthView(true)
                                                                     .setRedirectUri(APP_REDIRECT_URI)
                                                                     .build();
-            SpotifyAppRemote.CONNECTOR.disconnect(spotifyAppRemote);
+            SpotifyAppRemote.disconnect(spotifyAppRemote);
 
             if (spotifyConnectionListener == null) {
                 spotifyConnectionListener = new SpotifyConnectionListener();
             }
-            SpotifyAppRemote.CONNECTOR.connect(roomActivity,
-                                               connectionParams,
-                                               spotifyConnectionListener);
+            SpotifyAppRemote.connect(roomActivity,
+                                     connectionParams,
+                                     spotifyConnectionListener);
         }
     }
 
@@ -266,7 +266,7 @@ class ServerJukebox extends Jukebox {
     @Override
     public void turnOff() {
         super.turnOff();
-        SpotifyAppRemote.CONNECTOR.disconnect(spotifyAppRemote);
+        SpotifyAppRemote.disconnect(spotifyAppRemote);
         spotifyIsConnected = false;
     }
 }

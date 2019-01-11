@@ -1,6 +1,5 @@
 package ca.turnip.turnip;
 
-import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -8,18 +7,15 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AlertDialog;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.AppCompatImageView;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -62,6 +58,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     private LinearLayoutManager layoutManager;
     private LinearLayout noSongsContainer;
     private LinearLayout currentSongContainer;
+    private LinearLayout currentSongLinearLayout;
     private RecyclerView recyclerView;
     private SongQueueAdapter adapter;
     private Toast connectingToast;
@@ -187,49 +184,58 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_room);
 
-        if (savedInstanceState == null) {
-            bindRoomActivityConnectionService();
+        bindRoomActivityConnectionService();
 
-            hostActivityIntent = assignIntentVariables();
+        hostActivityIntent = assignIntentVariables();
 
-            setTitle(roomName);
+        setTitle(roomName);
 
-            assignViewElementVariables();
+        assignViewElementVariables();
 
-            fab.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    startSongAddActivity();
-                }
-            });
-
-            skipButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (isHost) {
-                        backgroundService.skipCurrentSong();
-                    }
-                    else {
-                        // TODO: vote to skip
-                    }
-                }
-            });
-
-            createLeaveRoomConfirmationDialog();
-
-            if (!isHost) {
-                createConnectingToast();
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startSongAddActivity();
             }
+        });
 
-            songQueue = new ArrayList();
-            layoutManager = new LinearLayoutManager(this);
-            adapter = new SongQueueAdapter(songQueue, this);
-            recyclerView.setLayoutManager(layoutManager);
-            recyclerView.setAdapter(adapter);
+        skipButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (isHost) {
+                    backgroundService.skipCurrentSong();
+                }
+                else {
+                    // TODO: vote to skip
+                }
+            }
+        });
 
-            renderCurrentlyPlaying();
-            renderSongQueueEmpty();
+        currentSongLinearLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (currentlyPlaying != null) {
+                    DialogFragment fragment = SongInfoDialogFragment.newInstance(currentlyPlaying);
+                    fragment.show(getSupportFragmentManager(), "dialog");
+                }
+            }
+        });
+
+        createLeaveRoomConfirmationDialog();
+
+        if (!isHost) {
+            createConnectingToast();
+
         }
+
+        songQueue = new ArrayList();
+        layoutManager = new LinearLayoutManager(this);
+        adapter = new SongQueueAdapter(this, getSupportFragmentManager(), songQueue);
+        recyclerView.setLayoutManager(layoutManager);
+        recyclerView.setAdapter(adapter);
+
+        renderCurrentlyPlaying();
+        renderSongQueueEmpty();
     }
 
     @Override
@@ -369,7 +375,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
             String albumArtUrl = null;
             try {
-                albumArtUrl = currentlyPlaying.getAlbumArtURL();
+                albumArtUrl = currentlyPlaying.getAlbumArtURL("small");
             } catch(JSONException e) {
               Log.e(TAG, e.toString());
             } finally {
@@ -390,7 +396,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
                         }
                     });
                 }
-                artist.setText(TextUtils.join(", ", currentlyPlaying.getArtists()));
+                artist.setText(currentlyPlaying.getArtistsAsString());
                 songName.setText(currentlyPlaying.getString("name"));
                 currentSongContainer.setVisibility(View.VISIBLE);
                 renderCurrentlyPlayingProgress();
@@ -472,6 +478,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
                     else {
                         backgroundService.connectToRoom(endpointId);
                     }
+                    Log.d(TAG, "Binding Room connection service");
                     backgroundService.subscribeRoomJukeboxListener(roomJukeboxListener);
                 }
             }
@@ -498,6 +505,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     private void assignViewElementVariables() {
         recyclerView = findViewById(R.id.roomRecyclerView);
         currentSongContainer = findViewById(R.id.currentSongContainer);
+        currentSongLinearLayout = findViewById(R.id.currentSongLinearLayout);
         noSongsContainer = findViewById(R.id.noSongsContainer);
         fab =  findViewById(R.id.fab);
         artist = findViewById(R.id.artist);

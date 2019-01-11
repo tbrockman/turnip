@@ -1,5 +1,6 @@
 package ca.turnip.turnip;
 
+import android.text.TextUtils;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -45,11 +46,39 @@ class SpotifySong extends Song {
         }
     }
 
-    public String getAlbumArtURL() throws JSONException {
+    public String getAlbumName() {
+        String albumName = null;
+        JSONObject album = get("album");
+        if (album != null) {
+            try {
+                albumName = album.getString("name");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return albumName;
+    }
+
+    public String getAlbumArtURL(String size) throws JSONException {
+        String albumArtUrl = null;
+        JSONObject imageInfoJSON = null;
         JSONObject album = this.get("album");
         JSONArray albumImages = album.getJSONArray("images");
-        JSONObject imageInfoJSON = albumImages.getJSONObject(albumImages.length()-1);
-        String albumArtUrl = imageInfoJSON.getString("url");
+
+        if (size.equals("small")) {
+            if (albumImages.length() >= 1) {
+                imageInfoJSON = albumImages.getJSONObject(albumImages.length()-1);
+            }
+        }
+        else if (size.equals("medium")) {
+            if (albumImages.length() >= 3) {
+                imageInfoJSON = albumImages.getJSONObject(albumImages.length()-3);
+            }
+        }
+
+        if (imageInfoJSON != null) {
+            albumArtUrl = imageInfoJSON.getString("url");
+        }
         return albumArtUrl;
     }
 
@@ -73,6 +102,10 @@ class SpotifySong extends Song {
         return "spotify";
     }
 
+    public String getSongTypeName() {
+        return "Spotify";
+    }
+
     public ArrayList<String> getArtists() {
         ArrayList<String> artists = new ArrayList<>();
         try {
@@ -85,6 +118,27 @@ class SpotifySong extends Song {
         }
 
         return artists;
+    }
+
+    public String getArtistsAsString() {
+        return TextUtils.join(", ", getArtists());
+    }
+
+    public String getSongTitle() {
+        return getString("name");
+    }
+
+    public String getExternalLink() {
+        JSONObject externalUrls = get("external_urls");
+        String external = null;
+        try {
+            if (externalUrls != null) {
+                external = externalUrls.getString("spotify");
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return external;
     }
 
     @Override

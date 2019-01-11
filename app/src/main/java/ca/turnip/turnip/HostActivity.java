@@ -1,7 +1,6 @@
 package ca.turnip.turnip;
 
 import android.app.Activity;
-import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -9,6 +8,7 @@ import android.content.ServiceConnection;
 import android.content.res.ColorStateList;
 import android.os.IBinder;
 import android.support.design.widget.TextInputEditText;
+import android.support.design.widget.TextInputLayout;
 import android.support.v4.content.ContextCompat;
 import android.os.Bundle;
 import android.text.Editable;
@@ -28,12 +28,13 @@ import com.spotify.sdk.android.authentication.AuthenticationResponse;
 
 import static ca.turnip.turnip.MainActivity.APP_REDIRECT_URI;
 import static ca.turnip.turnip.MainActivity.CLIENT_ID;
-import static com.spotify.sdk.android.authentication.LoginActivity.REQUEST_CODE;
 
 public class HostActivity extends BackgroundServiceConnectedActivity {
 
     private static final String TAG = HostActivity.class.getSimpleName();
     public static final int AUTH_CODE_REQUEST_CODE = 0x11;
+
+    private Context context;
 
     // Spotify
 
@@ -45,11 +46,15 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
     private TableLayout table;
     private Switch spotifySwitch;
     private Button startButton;
+    private TextInputLayout roomNameInputLayout;
     private TextInputEditText roomName;
     private ErrorDialog errorDialog;
     private SpotifyNotFoundDialog notFoundDialog;
 
-    private Context context;
+    // Start button validation
+
+    private boolean isStarting;
+    private boolean startButtonEnabled = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,6 +68,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
         initializeSwitch();
         initializeTable();
 
+        isStarting = (savedInstanceState == null);
         // TODO: retrieve data in intents from potentially previous created room
     }
 
@@ -71,6 +77,9 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
         super.onResume();
         spotifySwitch.setChecked(false);
         spotifyEnabled = false;
+        validateSubmit();
+
+        isStarting = false;
     }
 
     @Override
@@ -78,7 +87,6 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == AUTH_CODE_REQUEST_CODE) {
             final AuthenticationResponse response = AuthenticationClient.getResponse(resultCode, data);
-            Log.d(TAG, "code:" + String.valueOf(resultCode) + "data:" + data.toString());
 
             switch (response.getType()) {
                 // did we get the code we requested
@@ -127,7 +135,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
             @Override
             public void run() {
                 spotifyEnabled = true;
-                allowSubmit();
+                validateSubmit();
             }
         });
     }
@@ -158,27 +166,38 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
         disableButton(startButton);
     }
 
-    private void allowSubmit() {
+    private void validateSubmit() {
         String text = roomName.getText().toString();
         if (text.length() > 0 && spotifyEnabled) {
             enableButton(startButton);
         }
-        else {
-            disableButton(startButton);
-        }
+
+//        if (!isStarting) {
+//            if (text.length() == 0){
+//                disableButton(startButton);
+//                roomNameInputLayout.setError("Required");
+//            } else {
+//                roomNameInputLayout.setError(null);
+//                roomNameInputLayout.setHintEnabled(true);
+//            }
+//            if (!spotifyEnabled) {
+//
+//            }
+//        }
     }
 
     public void disableButton(Button button) {
-        button.setEnabled(false);
+        startButtonEnabled = false;
         button.setAlpha((float) 0.25);
     }
 
     public void enableButton(Button button) {
-        button.setEnabled(true);
+        startButtonEnabled = true;
         button.setAlpha(1);
     }
 
     private void initializeRoomNameField() {
+        roomNameInputLayout = findViewById(R.id.roomNameInputLayout);
         roomName = findViewById(R.id.roomName);
         roomName.addTextChangedListener(new TextWatcher() {
             @Override
@@ -186,7 +205,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                allowSubmit();
+                validateSubmit();
             }
 
             @Override
@@ -299,14 +318,18 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
     }
 
     public void startClicked(View view) {
-        EditText roomName = (EditText) findViewById(R.id.roomName);
+        if (startButtonEnabled) {
+            EditText roomName = (EditText) findViewById(R.id.roomName);
 //        EditText roomPassword = (EditText) findViewById(R.id.roomPassword);
-
-        Intent roomIntent = new Intent(this, RoomActivity.class);
-        roomIntent.putExtra("roomName", roomName.getText().toString());
+            Intent roomIntent = new Intent(this, RoomActivity.class);
+            roomIntent.putExtra("roomName", roomName.getText().toString());
 //        roomIntent.putExtra("roomPassword", roomPassword.getText().toString());
-        roomIntent.putExtra("isHost", true);
-        roomIntent.putExtra("spotifyEnabled", spotifyEnabled);
-        startActivity(roomIntent);
+            roomIntent.putExtra("isHost", true);
+            roomIntent.putExtra("spotifyEnabled", spotifyEnabled);
+            startActivity(roomIntent);
+        } else {
+
+        }
+
     }
 }

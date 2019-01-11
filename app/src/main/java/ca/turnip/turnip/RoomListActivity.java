@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.res.Configuration;
-import android.content.res.Resources;
 import android.graphics.Point;
 import android.os.Handler;
 import android.os.IBinder;
@@ -18,12 +17,10 @@ import android.util.Log;
 import android.view.Display;
 import android.view.View;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.TimerTask;
 
 public class RoomListActivity extends AppCompatActivity {
 
@@ -32,7 +29,7 @@ public class RoomListActivity extends AppCompatActivity {
     // Constants
 
     private static final CharSequence findingToastText = "Finding nearby hosts";
-    private static final int findHostsLength = 30 * 1000;
+    private static final int findHostsTimeout = 30 * 1000;
 
     // Background service
 
@@ -93,7 +90,7 @@ public class RoomListActivity extends AppCompatActivity {
 
             if (rooms.size() == 0) {
                 roomListSwipeRefresh.setRefreshing(true);
-                findHostsTimerHandler.postDelayed(findHostsTimer, findHostsLength);
+                findHostsTimerHandler.postDelayed(findHostsTimer, findHostsTimeout);
             }
             Log.d(TAG, "room lost: " + endpointId);
             int i = 0;
@@ -119,7 +116,7 @@ public class RoomListActivity extends AppCompatActivity {
             backgroundService = ((BackgroundService.LocalBinder)service).getService();
             backgroundService.subscribeRoomListListener(roomListListener);
             backgroundService.startDiscovery();
-            findHostsTimerHandler.postDelayed(findHostsTimer, findHostsLength);
+            findHostsTimerHandler.postDelayed(findHostsTimer, findHostsTimeout);
         }
 
         @Override
@@ -164,9 +161,8 @@ public class RoomListActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        createFindingHostsToast();
-        refreshHosts();
         roomListSwipeRefresh.setRefreshing(true);
+        refreshHosts();
     }
 
     @Override
@@ -206,7 +202,7 @@ public class RoomListActivity extends AppCompatActivity {
             backgroundService.startDiscovery();
             createFindingHostsToast();
             findHostsTimerHandler.removeCallbacks(findHostsTimer);
-            findHostsTimerHandler.postDelayed(findHostsTimer, findHostsLength);
+            findHostsTimerHandler.postDelayed(findHostsTimer, findHostsTimeout);
         }
     }
 

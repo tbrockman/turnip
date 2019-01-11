@@ -13,7 +13,7 @@
         <item>Majority</item>
     </string-array>
     <string name="no_song_text_header">No one\'s playing anything</string>
-    <string name="no_song_text_subtitle">Add some songs to get things started.</string>
+    <string name="no_song_text_subtitle">Add some songs to get things started!</string>
     <string name="album_art_content_description">Song album art</string>
     <string name="sad_boombox_content_description">Sad boombox drawable</string>
     <string name="preference_file_key">ca.turnip.turnip.PREFERENCE_FILE_KEY</string>
@@ -36,4 +36,10 @@
     <string name="install">Install</string>
     <string name="no_hosts_found">No nearby hosts found</string>
     <string name="no_hosts_hints">We weren\'t able to locate any nearby Turnip hosts. This can sometimes occur due to poor network connectivity. Swipe down to try searching again.</string>
+    <string name="share_description">Share icon</string>
+    <string name="spotify_description">Spotify icon</string>
+    <string name="favorite_description">Favorite icon</string>
+    <string name="by_string">by</string>
+    <string name="share_text">Share</string>
+    <string name="open_in_spotify_text">Open in Spotify</string>
 </resources>

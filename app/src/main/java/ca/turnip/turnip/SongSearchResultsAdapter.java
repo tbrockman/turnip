@@ -4,7 +4,6 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -72,10 +71,10 @@ public class SongSearchResultsAdapter
             final SongViewHolder songViewHolder = (SongViewHolder) holder;
             // SongViewHolder.
             songViewHolder.songName.setText(song.getString("name"));
-            songViewHolder.artist.setText(TextUtils.join(", ", song.getArtists()));
+            songViewHolder.artist.setText(song.getArtistsAsString());
 
             try {
-                String albumArtUrl = song.getAlbumArtURL();
+                String albumArtUrl = song.getAlbumArtURL("small");
                 songViewHolder.progressBar.setVisibility(View.VISIBLE);
                 songViewHolder.albumArt.setVisibility(View.INVISIBLE);
                 Picasso.get().load(albumArtUrl).into(songViewHolder.albumArt, new Callback() {

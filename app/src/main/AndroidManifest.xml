@@ -20,7 +20,7 @@
             android:name=".BackgroundService"
             android:enabled="true"
             android:exported="true"
-            android:stopWithTask="true" />
+            android:stopWithTask="false" />
 
         <activity
             android:name=".MainActivity"
@@ -28,33 +28,34 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <action android:name="android.intent.action.VIEW" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity
             android:name=".HostActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="@string/title_activity_host"
             android:parentActivityName=".MainActivity"
-            android:configChanges="orientation|keyboardHidden|screenSize"
             android:theme="@style/AppActionBarActivityTheme" />
         <activity
             android:name=".RoomActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="Room"
             android:parentActivityName=".MainActivity"
-            android:theme="@style/AppActionBarActivityTheme"
-            android:configChanges="orientation|keyboardHidden|screenSize"/>
+            android:theme="@style/AppActionBarActivityTheme" />
         <activity
             android:name=".RoomListActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="Join"
             android:parentActivityName=".MainActivity"
-            android:configChanges="orientation|keyboardHidden|screenSize"
             android:theme="@style/AppActionBarActivityTheme" />
         <activity
             android:name=".SongSearchActivity"
-            android:theme="@style/Empty"
-            android:launchMode="singleTop"
             android:configChanges="orientation|keyboardHidden|screenSize"
-            android:parentActivityName=".RoomActivity">
+            android:launchMode="singleTop"
+            android:parentActivityName=".RoomActivity"
+            android:theme="@style/Empty">
             <intent-filter>
                 <action android:name="android.intent.action.SEARCH" />
             </intent-filter>

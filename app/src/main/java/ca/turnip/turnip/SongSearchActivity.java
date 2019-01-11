@@ -257,6 +257,7 @@ public class SongSearchActivity extends AppCompatActivity {
                         final JSONObject jsonResponse = new JSONObject(response.body().string());
                         final JSONObject tracks = jsonResponse.getJSONObject("tracks");
                         final JSONArray jsonArray = tracks.getJSONArray("items");
+                        //Log.i(TAG, jsonArray.getJSONObject(0).getJSONObject("external_urls").getString("spotify"));
 
                         if (tracks.has("next")) {
                             nextUrl = tracks.getString("next");
