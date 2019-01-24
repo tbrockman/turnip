@@ -11,16 +11,26 @@ import android.support.design.widget.TextInputEditText;
 import android.support.design.widget.TextInputLayout;
 import android.support.v4.content.ContextCompat;
 import android.os.Bundle;
+import android.support.v4.view.animation.FastOutSlowInInterpolator;
+import android.support.v4.view.animation.LinearOutSlowInInterpolator;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.view.animation.AnticipateInterpolator;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.Interpolator;
+import android.view.animation.TranslateAnimation;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TableLayout;
+import android.widget.TextView;
 
 import com.spotify.sdk.android.authentication.AuthenticationClient;
 import com.spotify.sdk.android.authentication.AuthenticationRequest;
@@ -43,33 +53,42 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
 
     // UI
 
-    private TableLayout table;
-    private Switch spotifySwitch;
+    private Animation labelErrorSlideInAnimation;
     private Button startButton;
-    private TextInputLayout roomNameInputLayout;
-    private TextInputEditText roomName;
     private ErrorDialog errorDialog;
     private SpotifyNotFoundDialog notFoundDialog;
+    private Switch spotifySwitch;
+    private TableLayout table;
+    private TextInputLayout roomNameInputLayout;
+    private TextInputEditText roomName;
+    private TextView spotifySwitchText;
+    private TextView spotifySwitchErrorText;
 
     // Start button validation
 
-    private boolean isStarting;
+    private boolean isStarting = false;
+    private boolean roomNameDirty = false;
+    private boolean roomNameError = false;
+    private boolean spotifySwitchDirty = false;
+    private boolean spotifySwitchError = false;
     private boolean startButtonEnabled = false;
+
+    // Authentication listener
+    private AuthenticationListener authenticationListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         context = this;
         setContentView(R.layout.activity_host);
-        bindHostActivityConnectionService();
-
+        initializeColorChangingLabels();
         initializeRoomNameField();
         initializeStartButton();
         initializeSwitch();
         initializeTable();
 
-        isStarting = (savedInstanceState == null);
         // TODO: retrieve data in intents from potentially previous created room
+        isStarting = (savedInstanceState == null);
     }
 
     @Override
@@ -77,9 +96,50 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
         super.onResume();
         spotifySwitch.setChecked(false);
         spotifyEnabled = false;
-        validateSubmit();
+        authenticationListener = new AuthenticationListener() {
+            @Override
+            public void onTokenSuccess() {
+                handleSpotifyAuthSuccess();
+            }
 
-        isStarting = false;
+            @Override
+            public void onTokenFailure() {
+                handleSpotifyAuthError();
+            }
+        };
+
+        Interpolator linearOutSlowInInterpolator = new LinearOutSlowInInterpolator();
+
+        labelErrorSlideInAnimation = new TranslateAnimation(0, 0,
+                                                        -16, 0);
+        labelErrorSlideInAnimation.setDuration(217);
+        labelErrorSlideInAnimation.setInterpolator(linearOutSlowInInterpolator);
+        labelErrorSlideInAnimation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+                spotifySwitchErrorText.setVisibility(View.VISIBLE);
+                spotifySwitchText.setTextColor(getResources().getColor(R.color.inputLayoutLabelError));
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
+
+        if (backgroundService == null) {
+            bindHostActivityConnectionService();
+        } else {
+            backgroundService.subscribeAuthListener(authenticationListener);
+        }
+        if (!isStarting) {
+            validateSubmit(true);
+        }
     }
 
     @Override
@@ -111,31 +171,22 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
             new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    spotifySwitchDirty = true;
                     if (isChecked) {
                         authenticateSpotify();
+                    } else {
+                        spotifyEnabled = false;
+                        validateSubmit(true);
                     }
                 }
             };
-
-    private AuthenticationListener authenticationListener = new AuthenticationListener() {
-        @Override
-        public void onTokenSuccess() {
-            handleSpotifyAuthSuccess();
-        }
-
-        @Override
-        public void onTokenFailure() {
-            handleSpotifyAuthError();
-
-        }
-    };
 
     private void handleSpotifyAuthSuccess() {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 spotifyEnabled = true;
-                validateSubmit();
+                validateSubmit(true);
             }
         });
     }
@@ -147,7 +198,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
             public void run() {
                 spotifyEnabled = false;
                 spotifySwitch.setChecked(false);
-                if (isNetworkAvailable(context)) {
+                if (Utils.isNetworkAvailable(context)) {
                     errorDialog = new ErrorDialog(activity,"Authentication error", "Unable to retrieve necessary permissions from Spotify.");
                 }
                 else {
@@ -161,29 +212,75 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
         notFoundDialog = new SpotifyNotFoundDialog(this);
     }
 
+    private void initializeColorChangingLabels() {
+        spotifySwitchText = findViewById(R.id.spotifySwitchText);
+    }
+
     private void initializeStartButton() {
         startButton = findViewById(R.id.startButton);
         disableButton(startButton);
     }
 
-    private void validateSubmit() {
-        String text = roomName.getText().toString();
-        if (text.length() > 0 && spotifyEnabled) {
-            enableButton(startButton);
-        }
+    private void showRoomNameError() {
+        roomNameInputLayout.setHelperTextEnabled(false);
+        roomNameInputLayout.setHelperText(null);
+        roomNameInputLayout.setError(getResources().getText(R.string.room_name_error));
+    }
 
-//        if (!isStarting) {
-//            if (text.length() == 0){
-//                disableButton(startButton);
-//                roomNameInputLayout.setError("Required");
-//            } else {
-//                roomNameInputLayout.setError(null);
-//                roomNameInputLayout.setHintEnabled(true);
-//            }
-//            if (!spotifyEnabled) {
-//
-//            }
-//        }
+    private void clearRoomNameError() {
+        if (roomNameError) {
+            roomNameError = false;
+            roomNameInputLayout.setError(null);
+            roomNameInputLayout.setHelperText(getResources().getText(R.string.room_name_helper));
+            roomNameInputLayout.setHelperTextEnabled(true);
+        }
+    }
+
+    private void showSpotifySwitchError() {
+        spotifySwitchErrorText.startAnimation(labelErrorSlideInAnimation);
+    }
+
+    private void clearSpotifySwitchError() {
+        if (spotifySwitchError) {
+            spotifySwitchError = false;
+            spotifySwitchText.setTextColor(getResources().getColor(R.color.defaultText));
+            spotifySwitchErrorText.setVisibility(View.INVISIBLE);
+        }
+    }
+
+    private void validateRoomName(Boolean checkDirty) {
+        String text = roomName.getText().toString();
+        if (text.length() == 0) {
+            roomNameError = true;
+            if (checkDirty && !roomNameDirty) return;
+            showRoomNameError();
+        }
+        else {
+            clearRoomNameError();
+        }
+    }
+
+    private void validateSpotifySwitch(Boolean checkDirty) {
+        if (!spotifyEnabled) {
+            if (spotifySwitchError) return;
+            spotifySwitchError = true;
+            if (checkDirty && !spotifySwitchDirty) return;
+            showSpotifySwitchError();
+        }
+        else {
+            clearSpotifySwitchError();
+        }
+    }
+
+    private void validateSubmit(Boolean checkDirty) {
+        validateRoomName(checkDirty);
+        validateSpotifySwitch(checkDirty);
+
+        if (!spotifySwitchError && !roomNameError) {
+            enableButton(startButton);
+        } else {
+            disableButton(startButton);
+        }
     }
 
     public void disableButton(Button button) {
@@ -205,7 +302,8 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                validateSubmit();
+                roomNameDirty = true;
+                validateSubmit(true);
             }
 
             @Override
@@ -239,6 +337,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
 
     private void initializeSwitch() {
         spotifySwitch = findViewById(R.id.spotifySwitch);
+        spotifySwitchErrorText = findViewById(R.id.switchErrorText);
         ColorStateList colorStateList = new ColorStateList(
                 new int[][] {
                         new int[]{android.R.attr.state_checked},
@@ -306,11 +405,10 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
 
             @Override
             public void onServiceDisconnected(ComponentName name) {
-                Log.d(TAG, "disconnected from service");
                 backgroundService = null;
             }
         };
-        super.bindConnectionService(this);
+        startAndBindConnectionService(this);
     }
 
     public void cancelClicked(View view) {
@@ -318,6 +416,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
     }
 
     public void startClicked(View view) {
+        validateSubmit(false);
         if (startButtonEnabled) {
             EditText roomName = (EditText) findViewById(R.id.roomName);
 //        EditText roomPassword = (EditText) findViewById(R.id.roomPassword);

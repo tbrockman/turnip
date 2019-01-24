@@ -38,7 +38,7 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
-public class SongSearchActivity extends AppCompatActivity {
+public class SongSearchActivity extends BackgroundServiceConnectedActivity {
 
     private static final String TAG = SongSearchActivity.class.getSimpleName();
     private static final int SPEECH_REQUEST_CODE = 0;
@@ -69,23 +69,12 @@ public class SongSearchActivity extends AppCompatActivity {
     // Network
 
     private BackgroundService backgroundService;
-    private ServiceConnection connection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            backgroundService = ((BackgroundService.LocalBinder)service).getService();
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            backgroundService = null;
-        }
-    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_song_search);
-        bindConnectionService();
+        bindSongSearchActivityConnectionService();
 
         songs = new ArrayList<>();
         searchTimer = new Timer();
@@ -205,7 +194,7 @@ public class SongSearchActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unbindService(connection);
+        unbindConnectionService();
     }
 
     private void searchSpotify(String search) {
@@ -305,11 +294,20 @@ public class SongSearchActivity extends AppCompatActivity {
         }
     };
 
-    private void bindConnectionService() {
-        Intent serviceIntent = new Intent(this, BackgroundService.class);
-        bindService(serviceIntent,
-                    connection,
-                    Context.BIND_AUTO_CREATE);
+
+    private void bindSongSearchActivityConnectionService() {
+        connection = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {
+                backgroundService = ((BackgroundService.LocalBinder)service).getService();
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+                backgroundService = null;
+            }
+        };
+        startAndBindConnectionService(this);
     }
 
     protected interface SongClickedCallback {

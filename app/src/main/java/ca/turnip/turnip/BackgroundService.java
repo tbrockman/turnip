@@ -176,6 +176,12 @@ public class BackgroundService extends Service {
             getSpotifyUrl("https://api.spotify.com/v1/tracks/" + id,
                           new SpotifySongAddedCallback(timeElapsed));
         }
+
+        @Override
+        public void onSpotifyDisconnected() {
+            notifySpotifyDisconnect();
+            destroyRoom();
+        };
     };
 
     public class LocalBinder extends Binder {
@@ -220,9 +226,9 @@ public class BackgroundService extends Service {
     // Clean-up
 
     public void onRoomResume(Activity roomActivity) {
-        if (isHost) {
-            ((ServerJukebox) jukebox).connectToSpotify(roomActivity);
-        }
+//        if (isHost) {
+//            ((ServerJukebox) jukebox).connectToSpotify(roomActivity);
+//        }
     }
 
     @Override
@@ -239,7 +245,9 @@ public class BackgroundService extends Service {
                 connectionsClient.stopAllEndpoints();
             }
             else {
-                connectionsClient.disconnectFromEndpoint(serverEndpoint);
+                if (serverEndpoint != null) {
+                    connectionsClient.disconnectFromEndpoint(serverEndpoint);
+                }
             }
         }
 
@@ -304,6 +312,12 @@ public class BackgroundService extends Service {
     private void notifyDisconnected() {
         if (roomJukeboxListener != null) {
             roomJukeboxListener.onDisconnect();
+        }
+    }
+
+    private void notifySpotifyDisconnect() {
+        if (roomJukeboxListener != null) {
+            roomJukeboxListener.onSpotifyDisconnected();
         }
     }
 
@@ -745,7 +759,6 @@ public class BackgroundService extends Service {
                 emitSongAdded(connectedClients, song);
             }
             else {
-                Log.d(TAG, "we playing?");
                 jukebox.playSong(song);
             }
         }

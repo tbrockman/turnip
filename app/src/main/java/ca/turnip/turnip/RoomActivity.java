@@ -163,6 +163,24 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
                 builder.create();
                 builder.show();
             }
+
+            @Override
+            public void onSpotifyDisconnected() {
+                AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                builder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.cancel();
+                        finish();
+                    }
+                });
+                builder.setCancelable(false);
+                builder.setTitle("Spotify disconnected");
+                builder.setMessage("Lost connection to Spotify.");
+                builder.create();
+                builder.show();
+            }
     };
 
     // Auth listener
@@ -274,13 +292,12 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
             if (this.isHost) {
                 Log.d(TAG, "Calling onDestroy here");
                 backgroundService.stopAdvertising();
-                backgroundService.unsubscribeAuthListener();
             }
             Log.d(TAG, "calling RoomActivity on destroy now");
             backgroundService.unsubscribeRoomJukeboxListener();
             backgroundService.destroyRoom();
         }
-        unbindService(connection);
+        unbindConnectionService();
         super.onDestroy();
     }
 
@@ -488,7 +505,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
                 backgroundService = null;
             }
         };
-        bindConnectionService(this);
+        startAndBindConnectionService(this);
     }
 
     @NonNull

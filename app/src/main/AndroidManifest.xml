@@ -19,7 +19,7 @@
         <service
             android:name=".BackgroundService"
             android:enabled="true"
-            android:exported="true"
+            android:exported="false"
             android:stopWithTask="false" />
 
         <activity
@@ -38,11 +38,14 @@
             android:label="@string/title_activity_host"
             android:parentActivityName=".MainActivity"
             android:theme="@style/AppActionBarActivityTheme" />
+        <!-- TODO: allow room to re-orient,
+        need to create horizontal song info dialog fragment to do so -->
         <activity
             android:name=".RoomActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="Room"
             android:parentActivityName=".MainActivity"
+            android:screenOrientation="portrait"
             android:theme="@style/AppActionBarActivityTheme" />
         <activity
             android:name=".RoomListActivity"

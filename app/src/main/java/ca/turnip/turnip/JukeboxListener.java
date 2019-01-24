@@ -8,4 +8,5 @@ interface JukeboxListener {
     void onSongResumed(int timeElapsed);
     void onSongTick(int timeElapsed);
     void onSpotifyAddedSong(String id, int timeElapsed);
+    void onSpotifyDisconnected();
 }

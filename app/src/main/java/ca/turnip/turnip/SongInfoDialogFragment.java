@@ -3,7 +3,6 @@ package ca.turnip.turnip;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.constraint.ConstraintLayout;
 import android.support.v4.app.DialogFragment;
 import android.text.TextUtils;
 import android.util.Log;
@@ -12,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.squareup.picasso.Callback;
@@ -27,7 +27,7 @@ public class SongInfoDialogFragment extends DialogFragment {
     Song song;
 
     // UI Elements
-    private ConstraintLayout songAlbumArtPlaceholder;
+    private ProgressBar songAlbumArtPlaceholder;
     private ImageView songAlbumArt;
     private LinearLayout shareLinearLayout;
     private LinearLayout openInSpotifyLinearLayout;
@@ -69,8 +69,9 @@ public class SongInfoDialogFragment extends DialogFragment {
         if (song != null) {
             try {
                 Picasso.get()
-                       .load(song.getAlbumArtURL("medium"))
+                       .load(song.getAlbumArtURL("large"))
                        .fit()
+                       //.resize(960, 960)
                        .into(songAlbumArt, new Callback() {
 
                     @Override
@@ -78,6 +79,8 @@ public class SongInfoDialogFragment extends DialogFragment {
                         if (songAlbumArtPlaceholder != null) {
                             songAlbumArtPlaceholder.setVisibility(View.GONE);
                         }
+
+                        songAlbumArt.setVisibility(View.VISIBLE);
                     }
 
                     @Override
@@ -95,7 +98,6 @@ public class SongInfoDialogFragment extends DialogFragment {
         shareLinearLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //TODO:
                 String message = "\"" + song.getSongTitle() + "\" by " + song.getArtistsAsString() + ". Listen on " + song.getSongTypeName() + ": " + song.getExternalLink();
                 Intent sendIntent = new Intent();
                 sendIntent.setAction(Intent.ACTION_SEND);
@@ -109,7 +111,6 @@ public class SongInfoDialogFragment extends DialogFragment {
         openInSpotifyLinearLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //TODO:
                 Intent openIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(song.getExternalLink()));
                 startActivity(openIntent);
             }

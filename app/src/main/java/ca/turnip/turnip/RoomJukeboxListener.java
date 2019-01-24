@@ -4,5 +4,6 @@ public interface RoomJukeboxListener extends JukeboxListener {
 
     void onSongAdded(Song song);
     void onDisconnect();
+    void onSpotifyDisconnected();
     void onConnect();
 }

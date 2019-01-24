@@ -48,7 +48,7 @@ class ServerJukebox extends Jukebox {
         // TODO: if spotify then ->
         this.roomContext = roomActivity;
         this.jukeboxListener = jukeboxListener;
-        connectToSpotify(roomActivity);
+        connectToSpotify(roomContext);
     }
 
     private class SpotifyConnectionListener implements Connector.ConnectionListener {
@@ -92,10 +92,7 @@ class ServerJukebox extends Jukebox {
                         // We have a current track, but nothing in the queue
                         // Show what Spotify is playing
                         else {
-                            // TODO: implement a lock to prevent calling this
-                            // multiple times for the same song
                             if (!spotifyTrackID.equals(spotifyCurrentlyAddedSong)) {
-                                Log.d(TAG, "could be playing spotifys song here");
                                 spotifyCurrentlyAddedSong = spotifyTrackID;
                                 jukeboxListener.onSpotifyAddedSong(spotifyTrackID,
                                                                    roundedTimeElapsed);
@@ -123,7 +120,6 @@ class ServerJukebox extends Jukebox {
                     else if (current == null && spotifyTrackURI != null &&
                         !spotifyTrackID.equals(spotifyCurrentlyAddedSong) &&
                         !playerState.isPaused) {
-                        Log.d(TAG, "current track is null, play spotify");
                         spotifyCurrentlyAddedSong = spotifyTrackID;
                         jukeboxListener.onSpotifyAddedSong(spotifyTrackID,
                                                            roundedTimeElapsed);
@@ -145,7 +141,7 @@ class ServerJukebox extends Jukebox {
                 @Override
                 public void onError(Throwable throwable) {
                     // TODO: spotify remote error get player api handling
-                    Log.e(TAG, throwable.toString());
+                    Log.d(TAG, throwable.toString());
                 }
             };
         }
@@ -170,7 +166,8 @@ class ServerJukebox extends Jukebox {
             Log.d(TAG, "failed connection to spotify" + throwable.getMessage());
             spotifyIsConnected = false;
             spotifyAppRemote = null;
-            playerStateSubscription.cancel();
+            playerStateSubscription = null;
+            jukeboxListener.onSpotifyDisconnected();
         }
     }
 

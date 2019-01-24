@@ -12,8 +12,9 @@ public class BackgroundServiceConnectedActivity extends AppCompatActivity {
     protected BackgroundService backgroundService;
     protected ServiceConnection connection;
 
-    public void bindConnectionService(Context context) {
+    public void startAndBindConnectionService(Context context) {
         Intent serviceIntent = new Intent(context, BackgroundService.class);
+        startService(serviceIntent);
         bindService(serviceIntent,
                     connection,
                     Context.BIND_AUTO_CREATE);
@@ -23,14 +24,4 @@ public class BackgroundServiceConnectedActivity extends AppCompatActivity {
         unbindService(connection);
     }
 
-    public static boolean isNetworkAvailable(Context context) {
-        ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        if (connectivityManager != null) {
-            NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
-            return (activeNetwork != null && activeNetwork.isConnectedOrConnecting());
-        } else {
-            return false;
-        }
-    }
 }

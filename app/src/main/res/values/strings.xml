@@ -4,6 +4,8 @@
     <string name="cancel_button_text">Cancel</string>
     <string name="start_button_text">Start</string>
     <string name="room_name_hint">Room name</string>
+    <string name="room_name_error">Room name required</string>
+    <string name="room_name_helper">Required</string>
     <string name="room_password_hint">Room password</string>
     <string name="spotify_logo">Spotify logo</string>
     <string name="spotify_switch_text">Play songs from Spotify</string>
@@ -42,4 +44,6 @@
     <string name="by_string">by</string>
     <string name="share_text">Share</string>
     <string name="open_in_spotify_text">Open in Spotify</string>
+    <string name="queue_label">Queue</string>
+    <string name="spotify_switch_error_text">Need at least one song source</string>
 </resources>

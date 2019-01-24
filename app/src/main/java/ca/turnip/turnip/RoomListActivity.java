@@ -9,7 +9,6 @@ import android.graphics.Point;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -22,7 +21,7 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class RoomListActivity extends AppCompatActivity {
+public class RoomListActivity extends BackgroundServiceConnectedActivity {
 
     private static final String TAG = RoomListActivity.class.getSimpleName();
 
@@ -109,27 +108,11 @@ public class RoomListActivity extends AppCompatActivity {
         }
     };
 
-    private ServiceConnection connection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            backgroundService = ((BackgroundService.LocalBinder)service).getService();
-            backgroundService.subscribeRoomListListener(roomListListener);
-            backgroundService.startDiscovery();
-            findHostsTimerHandler.postDelayed(findHostsTimer, findHostsTimeout);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            backgroundService = null;
-        }
-    };
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_room_list);
-        bindConnectionService();
+        bindRoomListActivityConnectionService();
 
         createFindingHostsToast();
         noHostsFoundContainer = findViewById(R.id.noHostsFoundContainer);
@@ -171,7 +154,7 @@ public class RoomListActivity extends AppCompatActivity {
         backgroundService.unsubscribeRoomListListener();
         backgroundService.stopDiscovery();
         findingToast.cancel();
-        unbindService(connection);
+        unbindConnectionService();
     }
 
     private void setSwipeProgressEndTarget() {
@@ -206,10 +189,22 @@ public class RoomListActivity extends AppCompatActivity {
         }
     }
 
-    private void bindConnectionService() {
-        Intent serviceIntent = new Intent(this, BackgroundService.class);
-        bindService(serviceIntent,
-                    connection,
-                    Context.BIND_AUTO_CREATE);
+    private void bindRoomListActivityConnectionService() {
+        connection = new ServiceConnection() {
+
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {
+                backgroundService = ((BackgroundService.LocalBinder)service).getService();
+                backgroundService.subscribeRoomListListener(roomListListener);
+                backgroundService.startDiscovery();
+                findHostsTimerHandler.postDelayed(findHostsTimer, findHostsTimeout);
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+                backgroundService = null;
+            }
+        };
+        startAndBindConnectionService(this);
     }
 }

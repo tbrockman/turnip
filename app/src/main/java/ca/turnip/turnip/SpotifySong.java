@@ -71,6 +71,11 @@ class SpotifySong extends Song {
             }
         }
         else if (size.equals("medium")) {
+            if (albumImages.length() >= 2) {
+                imageInfoJSON = albumImages.getJSONObject(albumImages.length()-2);
+            }
+        }
+        else if (size.equals("large")) {
             if (albumImages.length() >= 3) {
                 imageInfoJSON = albumImages.getJSONObject(albumImages.length()-3);
             }

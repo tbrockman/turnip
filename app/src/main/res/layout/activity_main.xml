@@ -20,8 +20,8 @@
         <android.support.v7.widget.AppCompatImageView
             android:id="@+id/imageView"
             android:layout_width="match_parent"
-            android:layout_height="120dp"
-            android:layout_marginBottom="10dp"
+            android:layout_height="240dp"
+            android:layout_marginBottom="30dp"
             android:layout_weight="1"
             app:srcCompat="@drawable/ic_turnip_icon" />
 
@@ -29,7 +29,7 @@
             android:id="@+id/textView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_marginBottom="60dp"
+            android:layout_marginBottom="30dp"
             android:layout_weight="1"
             android:fontFamily="@font/fredoka_one"
             android:shadowColor="#000000"
@@ -39,7 +39,7 @@
             android:text="@string/app_name"
             android:textAlignment="center"
             android:textColor="@color/colorButtonTextPrimary"
-            android:textSize="20sp"
+            android:textSize="48sp"
             android:textStyle="bold"
             android:visibility="visible" />
 
