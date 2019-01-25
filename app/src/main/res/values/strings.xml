@@ -46,4 +46,5 @@
     <string name="open_in_spotify_text">Open in Spotify</string>
     <string name="queue_label">Queue</string>
     <string name="spotify_switch_error_text">Need at least one song source</string>
+    <string name="host_string">Host</string>
 </resources>

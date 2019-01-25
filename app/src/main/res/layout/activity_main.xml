@@ -20,7 +20,7 @@
         <android.support.v7.widget.AppCompatImageView
             android:id="@+id/imageView"
             android:layout_width="match_parent"
-            android:layout_height="240dp"
+            android:layout_height="200dp"
             android:layout_marginBottom="30dp"
             android:layout_weight="1"
             app:srcCompat="@drawable/ic_turnip_icon" />
@@ -39,7 +39,7 @@
             android:text="@string/app_name"
             android:textAlignment="center"
             android:textColor="@color/colorButtonTextPrimary"
-            android:textSize="48sp"
+            android:textSize="36sp"
             android:textStyle="bold"
             android:visibility="visible" />
 
@@ -51,7 +51,7 @@
             android:drawableTint="@color/colorButtonTextPrimary"
             android:fontFamily="@font/fredoka_one"
             android:onClick="hostButtonClicked"
-            android:text="Host"
+            android:text="@string/host_string"
             android:tint="@color/colorButtonTextPrimary" />
 
         <android.support.v7.widget.AppCompatButton
