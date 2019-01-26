@@ -11,6 +11,7 @@
     <style name="AppActionBarActivityTheme" parent="@style/Theme.AppCompat">
         <item name="android:actionBarStyle">@style/ActionBarStyle</item>
         <item name="actionBarStyle">@style/ActionBarStyle</item>
+        <item name="colorAccent">@color/colorPrimary</item>
     </style>
 
     <style name="SearchViewStyle" parent="Widget.AppCompat.SearchView">

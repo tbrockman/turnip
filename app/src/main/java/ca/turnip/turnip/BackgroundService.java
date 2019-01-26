@@ -119,6 +119,7 @@ public class BackgroundService extends Service {
 
     // Token refreshing
     private int spotifyExpiresIn;
+    private boolean spotifyAuthenticated = false;
     private Handler spotifyTimerHandler = new Handler();
     private Runnable spotifyRefreshTokenTimer = new Runnable() {
         @Override
@@ -849,6 +850,21 @@ public class BackgroundService extends Service {
         lastRequest.enqueue(callback);
     }
 
+    public synchronized void getCurrentUserProfile(Callback callback) {
+        final Request request =
+                new Request.Builder()
+                        .url("https://api.spotify.com/v1/me")
+                        .addHeader("Authorization", "Bearer " + spotifyAccessToken)
+                        .addHeader("Accept", "application/json")
+                        .build();
+        lastRequest = okHttpClient.newCall(request);
+        lastRequest.enqueue(callback);
+    }
+
+    public boolean spotifyIsAuthenticated() {
+        return spotifyAuthenticated;
+    }
+
     public void getAccessAndRefreshTokenFromCode(String authorizationCode) {
         try {
             JSONObject jsonBody = new JSONObject();
@@ -906,9 +922,10 @@ public class BackgroundService extends Service {
                 spotifyExpiresIn = Integer.valueOf(jsonResponse.getString("expires_in"));
                 setSpotifyAccessToken(jsonResponse.getString("access_token"));
                 // refresh 5 minutes before token expiry
-                notifyAuthSuccessful();
+                spotifyAuthenticated = true;
                 spotifyTimerHandler.postDelayed(spotifyRefreshTokenTimer,
-                                     (spotifyExpiresIn-300) * 1000);
+                                      (spotifyExpiresIn-300) * 1000);
+                notifyAuthSuccessful();
             } catch (Exception e) {
                 notifyAuthFailed();
                 Log.e(TAG, "Error parsing/emitting access token: " + e.toString());
@@ -934,9 +951,10 @@ public class BackgroundService extends Service {
                 setSpotifyRefreshToken(jsonResponse.getString("refresh_token"));
                 setSpotifyAccessToken(jsonResponse.getString("access_token"));
                 // refresh 5 minutes before token expiry
-                notifyAuthSuccessful();
+                spotifyAuthenticated = true;
                 spotifyTimerHandler.postDelayed(spotifyRefreshTokenTimer,
-                                     (spotifyExpiresIn-300) * 1000);
+                                      (spotifyExpiresIn-300) * 1000);
+                notifyAuthSuccessful();
             } catch (Exception e) {
                 notifyAuthFailed();
                 Log.e(TAG, "Error parsing/emitting access token: " + e.toString());

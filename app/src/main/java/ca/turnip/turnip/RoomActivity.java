@@ -260,7 +260,6 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     protected void onResume() {
         super.onResume();
         if (backgroundService != null) {
-            Log.d(TAG, "on room resume called");
             backgroundService.onRoomResume(this);
             if (!wasSearching) {
                 setCurrentlyPlaying(backgroundService.getCurrentlyPlaying());
@@ -288,17 +287,15 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
     @Override
     public void onDestroy() {
+        super.onDestroy();
         if (isFinishing()) {
             if (this.isHost) {
-                Log.d(TAG, "Calling onDestroy here");
                 backgroundService.stopAdvertising();
             }
-            Log.d(TAG, "calling RoomActivity on destroy now");
             backgroundService.unsubscribeRoomJukeboxListener();
             backgroundService.destroyRoom();
         }
         unbindConnectionService();
-        super.onDestroy();
     }
 
     @Override

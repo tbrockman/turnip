@@ -36,6 +36,15 @@ import com.spotify.sdk.android.authentication.AuthenticationClient;
 import com.spotify.sdk.android.authentication.AuthenticationRequest;
 import com.spotify.sdk.android.authentication.AuthenticationResponse;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Response;
+
 import static ca.turnip.turnip.MainActivity.APP_REDIRECT_URI;
 import static ca.turnip.turnip.MainActivity.CLIENT_ID;
 
@@ -94,12 +103,36 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        spotifySwitch.setChecked(false);
-        spotifyEnabled = false;
+        if (backgroundService == null || !backgroundService.spotifyIsAuthenticated()
+            && !isStarting) {
+            spotifySwitch.setChecked(false);
+            spotifyEnabled = false;
+        }
         authenticationListener = new AuthenticationListener() {
             @Override
             public void onTokenSuccess() {
-                handleSpotifyAuthSuccess();
+                backgroundService.getCurrentUserProfile(new Callback() {
+                    @Override
+                    public void onFailure(Call call, IOException e) {
+                        handleSpotifyAuthError();
+                    }
+
+                    @Override
+                    public void onResponse(Call call, Response response) throws IOException {
+                        final JSONObject jsonResponse;
+                        try {
+                            jsonResponse = new JSONObject(response.body().string());
+                            String product = jsonResponse.getString("product");
+                            if (!product.equals("premium")) {
+                                handleSpotifyNotPremium();
+                            } else {
+                                handleSpotifyAuthSuccess();
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
             }
 
             @Override
@@ -162,6 +195,16 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        View view = this.getCurrentFocus();
+        if (view != null) {
+            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         unbindConnectionService();
@@ -204,6 +247,22 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
                 else {
                     errorDialog = new ErrorDialog(activity, "Network error", "Unable to establish network connection to Spotify.");
                 }
+            }
+        });
+    }
+
+    private void handleSpotifyNotPremium() {
+        final Activity activity = this;
+        if (backgroundService != null) {
+            backgroundService.removeStoredSpotifyRefreshToken();
+        }
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                errorDialog = new ErrorDialog(activity,
+                        "Upgrade Spotify subscription",
+                        "Hosting using Spotify doesn't work for free tier accounts, upgrade your Spotify subscription to Premium to continue.",
+                        true);
             }
         });
     }
@@ -390,7 +449,8 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
     private AuthenticationRequest getAuthenticationRequest(AuthenticationResponse.Type type) {
         return new AuthenticationRequest.Builder(CLIENT_ID, type, APP_REDIRECT_URI)
                                         .setShowDialog(false)
-                                        .setScopes(new String[]{"app-remote-control"})
+                                        .setScopes(new String[]{"app-remote-control",
+                                                                "user-read-private"})
                                         .build();
     }
 

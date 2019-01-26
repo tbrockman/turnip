@@ -70,7 +70,6 @@ class ServerJukebox extends Jukebox {
                     String spotifyTrackURI = null;
                     String spotifyTrackID = null;
                     Song current = getCurrentlyPlaying();
-
                     if (playerState != null && playerState.track != null) {
                         spotifyTrackURI = playerState.track.uri;
                         if (spotifyTrackURI != null) {
@@ -151,9 +150,6 @@ class ServerJukebox extends Jukebox {
             Log.d(TAG, "succcessfully connected to spotify");
             spotifyAppRemote = remote;
             spotifyIsConnected = true;
-            if (playerStateSubscription != null) {
-                playerStateSubscription.cancel();
-            }
             playerStateSubscription = spotifyAppRemote.getPlayerApi()
                                                       .subscribeToPlayerState();
             playerStateSubscription.setEventCallback(spotifyEventCallback)
