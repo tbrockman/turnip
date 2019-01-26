@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
     android:layout_margin="10dp"
@@ -14,13 +15,15 @@
 
         <TextView
             android:id="@+id/textView"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:ellipsize="end"
             android:fontFamily="@font/fredoka_one"
-            android:text="testtext"
+            android:singleLine="true"
             android:textColor="@color/colorButtonTextPrimary"
-            android:textSize="24sp" />
+            android:textSize="24sp"
+            tools:text="testtexttesttexttesttexttesttexttesttexttesttexttesttexttesttexttesttext" />
 
         <android.support.v7.widget.AppCompatImageView
             android:id="@+id/imageView3"
