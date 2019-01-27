@@ -42,7 +42,6 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
     // Constants
 
-    static final int ADD_SONG_REQUEST = 1;
     static final CharSequence connectingToastText = "Connecting to host";
 
     // Context
@@ -286,21 +285,27 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     }
 
     @Override
-    public void onDestroy() {
-        super.onDestroy();
+    protected void onPause() {
+        super.onPause();
         if (isFinishing()) {
             if (this.isHost) {
                 backgroundService.stopAdvertising();
             }
+            Log.d(TAG, "Destroying room.");
             backgroundService.unsubscribeRoomJukeboxListener();
             backgroundService.destroyRoom();
+            unbindConnectionService();
         }
-        unbindConnectionService();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == ADD_SONG_REQUEST) {
+        if (requestCode == MainActivity.ADD_SONG_REQUEST) {
             if (resultCode == RESULT_OK) {
                 try {
                     Song song = null;
@@ -560,7 +565,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     private void startSongAddActivity() {
         wasSearching = true;
         Intent queueSong = new Intent(this, SongSearchActivity.class);
-        startActivityForResult(queueSong, ADD_SONG_REQUEST);
+        startActivityForResult(queueSong, MainActivity.ADD_SONG_REQUEST);
     }
 
     private JSONObject getCurrentRoomInfo() throws JSONException {

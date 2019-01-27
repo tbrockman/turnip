@@ -159,7 +159,7 @@ class ServerJukebox extends Jukebox {
         @Override
         public void onFailure(Throwable throwable) {
             //TODO: spotify remote connection failure handling
-            Log.d(TAG, "failed connection to spotify" + throwable.getMessage());
+            Log.d(TAG, "failed connection to spotify" + throwable.toString());
             spotifyIsConnected = false;
             spotifyAppRemote = null;
             playerStateSubscription = null;

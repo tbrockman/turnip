@@ -47,6 +47,7 @@ import okhttp3.Response;
 
 import static ca.turnip.turnip.MainActivity.APP_REDIRECT_URI;
 import static ca.turnip.turnip.MainActivity.CLIENT_ID;
+import static ca.turnip.turnip.MainActivity.HOST_ROOM;
 
 public class HostActivity extends BackgroundServiceConnectedActivity {
 
@@ -95,15 +96,12 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
         initializeStartButton();
         initializeSwitch();
         initializeTable();
-
-        // TODO: retrieve data in intents from potentially previous created room
-        isStarting = (savedInstanceState == null);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (backgroundService == null || !backgroundService.spotifyIsAuthenticated()
+        if ((backgroundService == null || !backgroundService.spotifyIsAuthenticated())
             && !isStarting) {
             spotifySwitch.setChecked(false);
             spotifyEnabled = false;
@@ -191,6 +189,10 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
                     spotifySwitch.setChecked(false);
                     break;
             }
+        }
+
+        if (requestCode == HOST_ROOM) {
+            isStarting = false;
         }
     }
 
@@ -485,7 +487,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
 //        roomIntent.putExtra("roomPassword", roomPassword.getText().toString());
             roomIntent.putExtra("isHost", true);
             roomIntent.putExtra("spotifyEnabled", spotifyEnabled);
-            startActivity(roomIntent);
+            startActivityForResult (roomIntent, HOST_ROOM);
         } else {
 
         }

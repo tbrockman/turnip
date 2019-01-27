@@ -18,12 +18,15 @@ import android.view.View;
 
 public class MainActivity extends AppCompatActivity {
 
+
     private static final String TAG = HostActivity.class.getSimpleName();
     protected static final String APP_ENDPOINT = "ca.turnip.turnip";
     protected static final String APP_REDIRECT_URI = "ca.turnip.turnip://callback";
     protected static String API_ENDPOINT;
     protected static final String CLIENT_ID = "73c78b0a36de4ccfbe474c9e26ae8513";
     protected static final String KEY_STORE_ALIAS = "turnip_keystore";
+    protected static final int ADD_SONG_REQUEST = 1;
+    protected static final int HOST_ROOM = 2;
 
     private static final String[] REQUIRED_PERMISSIONS =
             new String[] {

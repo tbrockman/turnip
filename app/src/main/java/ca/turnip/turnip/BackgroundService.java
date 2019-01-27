@@ -43,6 +43,7 @@ import java.security.SignatureException;
 import java.security.UnrecoverableEntryException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -119,7 +120,7 @@ public class BackgroundService extends Service {
 
     // Token refreshing
     private int spotifyExpiresIn;
-    private boolean spotifyAuthenticated = false;
+    private Date spotifyExpirationDate;
     private Handler spotifyTimerHandler = new Handler();
     private Runnable spotifyRefreshTokenTimer = new Runnable() {
         @Override
@@ -441,6 +442,11 @@ public class BackgroundService extends Service {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void setSpotifyTokenExpiration(int expiresIn) {
+        Date now = new Date();
+        spotifyExpirationDate = new Date(now.getTime() + (expiresIn * 1000));
     }
 
     // Server payload logic
@@ -862,7 +868,8 @@ public class BackgroundService extends Service {
     }
 
     public boolean spotifyIsAuthenticated() {
-        return spotifyAuthenticated;
+        Date now = new Date();
+        return now.before(spotifyExpirationDate);
     }
 
     public void getAccessAndRefreshTokenFromCode(String authorizationCode) {
@@ -915,14 +922,13 @@ public class BackgroundService extends Service {
 
         @Override
         public void onResponse(Call call, Response response) throws IOException {
-            // TODO: store access and refresh tokens on device
             try {
                 final JSONObject jsonResponse = new JSONObject(response.body().string());
                 Log.d(TAG, jsonResponse.toString());
                 spotifyExpiresIn = Integer.valueOf(jsonResponse.getString("expires_in"));
                 setSpotifyAccessToken(jsonResponse.getString("access_token"));
+                setSpotifyTokenExpiration(spotifyExpiresIn);
                 // refresh 5 minutes before token expiry
-                spotifyAuthenticated = true;
                 spotifyTimerHandler.postDelayed(spotifyRefreshTokenTimer,
                                       (spotifyExpiresIn-300) * 1000);
                 notifyAuthSuccessful();
@@ -950,8 +956,7 @@ public class BackgroundService extends Service {
                 spotifyExpiresIn = Integer.valueOf(jsonResponse.getString("expires_in"));
                 setSpotifyRefreshToken(jsonResponse.getString("refresh_token"));
                 setSpotifyAccessToken(jsonResponse.getString("access_token"));
-                // refresh 5 minutes before token expiry
-                spotifyAuthenticated = true;
+                setSpotifyTokenExpiration(spotifyExpiresIn);
                 spotifyTimerHandler.postDelayed(spotifyRefreshTokenTimer,
                                       (spotifyExpiresIn-300) * 1000);
                 notifyAuthSuccessful();
