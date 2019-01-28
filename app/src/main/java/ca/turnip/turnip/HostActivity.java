@@ -76,11 +76,12 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
 
     // Start button validation
 
-    private boolean isStarting = false;
+    private boolean isStarting = true;
     private boolean roomNameDirty = false;
     private boolean roomNameError = false;
     private boolean spotifySwitchDirty = false;
     private boolean spotifySwitchError = false;
+    private boolean spotifyErrorShowing = false;
     private boolean startButtonEnabled = false;
 
     // Authentication listener
@@ -101,11 +102,13 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
         if ((backgroundService == null || !backgroundService.spotifyIsAuthenticated())
             && !isStarting) {
             spotifySwitch.setChecked(false);
             spotifyEnabled = false;
         }
+
         authenticationListener = new AuthenticationListener() {
             @Override
             public void onTokenSuccess() {
@@ -298,12 +301,14 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
     }
 
     private void showSpotifySwitchError() {
+        spotifyErrorShowing = true;
         spotifySwitchErrorText.startAnimation(labelErrorSlideInAnimation);
     }
 
     private void clearSpotifySwitchError() {
         if (spotifySwitchError) {
             spotifySwitchError = false;
+            spotifyErrorShowing = false;
             spotifySwitchText.setTextColor(getResources().getColor(R.color.defaultText));
             spotifySwitchErrorText.setVisibility(View.INVISIBLE);
         }
@@ -323,7 +328,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
 
     private void validateSpotifySwitch(Boolean checkDirty) {
         if (!spotifyEnabled) {
-            if (spotifySwitchError) return;
+            if (spotifyErrorShowing) return;
             spotifySwitchError = true;
             if (checkDirty && !spotifySwitchDirty) return;
             showSpotifySwitchError();

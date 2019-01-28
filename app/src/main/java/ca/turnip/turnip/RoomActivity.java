@@ -1,5 +1,6 @@
 package ca.turnip.turnip;
 
+import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -47,11 +48,13 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     // Context
 
     Context context = this;
+    Activity activity = this;
     Intent hostActivityIntent;
 
     // UI elements
 
     private AlertDialog dialog;
+    private ErrorDialog spotifyTokenFailure;
     private FloatingActionButton fab;
     private FrameLayout loadingRoomSpinnerLayout;
     private LinearLayoutManager layoutManager;
@@ -192,7 +195,12 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
         @Override
         public void onTokenFailure() {
-
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    spotifyTokenFailure = new ErrorDialog(activity, "Authentication failed", "Client failed to authenticate with Spotify. Possible causes could be network connectivity issues or invalid Spotify credentials.", true);
+                }
+            });
         }
     };
 
@@ -242,7 +250,6 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
         if (!isHost) {
             createConnectingToast();
-
         }
 
         songQueue = new ArrayList();

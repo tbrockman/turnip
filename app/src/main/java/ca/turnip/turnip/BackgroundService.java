@@ -985,11 +985,18 @@ public class BackgroundService extends Service {
         public void onResponse(Call call, Response response) throws IOException {
             try {
                 final JSONObject jsonResponse = new JSONObject(response.body().string());
-                jsonResponse.put("timeElapsed", timeElapsed);
-                Log.d(TAG, jsonResponse.toString());
-                enqueueSongHandler.post(new SongQueueRunnable(jsonResponse));
+                // TODO: actually parse the error
+                if (jsonResponse.has("error")) {
+                    notifyAuthFailed();
+                }
+                else {
+                    jsonResponse.put("timeElapsed", timeElapsed);
+                    Log.d(TAG, jsonResponse.toString());
+                    enqueueSongHandler.post(new SongQueueRunnable(jsonResponse));
+                }
             } catch (JSONException e) {
                 Log.e(TAG, "Error parsing JSON Spotify song: " + e.toString());
+                notifyAuthFailed();
             }
         }
     }
