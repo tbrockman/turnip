@@ -1,6 +1,7 @@
 package ca.turnip.turnip;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothClass;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -35,6 +36,8 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Locale;
+
+import static ca.turnip.turnip.RoomConfiguration.MAJORITY;
 
 
 public class RoomActivity extends BackgroundServiceConnectedActivity {
@@ -85,7 +88,11 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
     private ArrayList<Song> songQueue;
 
-    // Activity life cycle
+    // Skip mode
+
+    private int skipMode = MAJORITY;
+
+    // State information
 
     private boolean wasSearching = false;
 
@@ -490,13 +497,8 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
                     backgroundService.setUpJukebox(isHost);
 
                     if (isHost) {
+                        backgroundService.setRoomConfiguration(getCurrentRoomConfiguration());
                         backgroundService.startAdvertising(roomName);
-                        try {
-                            backgroundService.setRoomInfo(getCurrentRoomInfo());
-                        } catch (JSONException e) {
-                            // TODO: handle this error properly
-                            e.printStackTrace();
-                        }
                         if (spotifyEnabled) {
                             backgroundService.subscribeAuthListener(authenticationListener);
                         }
@@ -575,24 +577,20 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         startActivityForResult(queueSong, MainActivity.ADD_SONG_REQUEST);
     }
 
-    private JSONObject getCurrentRoomInfo() throws JSONException {
-        JSONObject roomInfo = new JSONObject();
+    private RoomConfiguration getCurrentRoomConfiguration() {
         PackageInfo pInfo = null;
-
         try {
             pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();
         }
 
-        if (pInfo != null) {
-            roomInfo.put("app_version", pInfo.versionCode);
-        }
+        RoomConfiguration roomConfiguration = new RoomConfiguration(roomPassword != null,
+                                                                    spotifyEnabled,
+                                                                    skipMode,
+                                                                    pInfo.versionCode,
+                                                                    roomName);
 
-        roomInfo.put("passwordProtected", roomPassword != null);
-        roomInfo.put("name", roomName);
-        roomInfo.put("spotifyEnabled", spotifyEnabled);
-
-        return roomInfo;
+        return roomConfiguration;
     }
 }

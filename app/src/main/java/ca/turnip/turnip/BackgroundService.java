@@ -77,6 +77,9 @@ public class BackgroundService extends Service {
     private boolean isHost;
     private boolean inRoom;
     private boolean isDiscovering = false;
+
+    // Room configuration
+    private RoomConfiguration roomConfiguration = null;
     private boolean spotifyEnabled = false;
     private JSONObject roomInfo = null;
     private int serverVersionCode;
@@ -221,8 +224,8 @@ public class BackgroundService extends Service {
         }
     }
 
-    public void setRoomInfo(JSONObject roomInfo) {
-        this.roomInfo = roomInfo;
+    public void setRoomConfiguration(RoomConfiguration roomConfiguration) {
+        this.roomConfiguration = roomConfiguration;
     }
 
     // Clean-up
@@ -457,17 +460,22 @@ public class BackgroundService extends Service {
             String raw = new String(payload.asBytes());
             try {
                 String token = raw.substring(0, 3);
+                String jsonString;
                 try {
                     switch (token) {
                         // Someone wants to add a song to the queue
                         case "add":
-                            String stringJson = raw.substring(4);
-                            JSONObject jsonSong = new JSONObject(stringJson);
+                            jsonString = raw.substring(4);
+                            JSONObject jsonSong = new JSONObject(jsonString);
                             Song song = new SpotifySong(jsonSong);
                             enqueueSong(song);
                             break;
                         // Someone is attempting to authenticate with the server
-                        case "pass":
+                        case "pwd":
+                            jsonString = raw.substring(4);
+                            // TODO: generate salt, store hash of salt and password
+                            // keeping salt, when first creating a room
+
                             break;
                         default:
                             break;
@@ -513,15 +521,13 @@ public class BackgroundService extends Service {
                         // Room info on start-up, tells us if we need to send the server a password
                         case "inf":
                             stringPayload = raw.substring(4);
-                            roomInfo = new JSONObject(stringPayload);
+                            jsonPayload = new JSONObject(stringPayload);
+                            setRoomConfiguration(RoomConfiguration.fromJSON(jsonPayload));
 
-                            if (roomInfo.getBoolean("passwordProtected")) {
+                            if (roomConfiguration.isPasswordProtected()) {
                                 // TODO: send passsword
                             }
 
-                            serverVersionCode = roomInfo.getInt("app_version");
-                            spotifyEnabled = roomInfo.getBoolean("spotifyEnabled");
-                            Log.d(TAG, roomInfo.toString());
                             break;
                         // Someone has added a new song to the queue
                         case "add":
@@ -591,12 +597,16 @@ public class BackgroundService extends Service {
             public void onConnectionResult(@NonNull String endpointId,
                                            @NonNull ConnectionResolution connectionResolution) {
                 Log.d(TAG, "Finished accepting connection from: " + endpointId);
-                connectedClients.add(endpointId);
-                sendCurrentRoomInformation(endpointId);
-                sendCurrentlyPlaying(endpointId, jukebox.getCurrentlyPlaying());
-                sendSpotifyToken(endpointId, spotifyAccessToken);
-                if (jukebox.getSongQueueLength() > 0) {
-                    sendClientSongQueue(endpointId, jukebox.getSongQueue());
+                if (!roomConfiguration.isPasswordProtected()) {
+                    connectedClients.add(endpointId);
+                    // TODO: disconnect clients that dont provide a password
+                    // within a sufficient amount of time
+                    // also switch over use of connected clients to authenticated clients
+                    authenticatedClients.add(endpointId);
+                    sendCurrentRoomConfiguration(endpointId);
+                    sendClientSongsAndToken(endpointId);
+                } else {
+                    sendCurrentRoomConfiguration(endpointId);
                 }
             }
 
@@ -606,6 +616,14 @@ public class BackgroundService extends Service {
                 Log.d(TAG, "Connection disconnected: " + endpointId);
             }
         };
+
+    private void sendClientSongsAndToken(@NonNull String endpointId) {
+        sendCurrentlyPlaying(endpointId, jukebox.getCurrentlyPlaying());
+        sendSpotifyToken(endpointId, spotifyAccessToken);
+        if (jukebox.getSongQueueLength() > 0) {
+            sendClientSongQueue(endpointId, jukebox.getSongQueue());
+        }
+    }
 
     // Client connection logic
 
@@ -734,6 +752,13 @@ public class BackgroundService extends Service {
 
     public ArrayList<Endpoint> getDiscoveredHosts() {
         return this.discoveredHosts;
+    }
+
+    private void sendCurrentRoomConfiguration(String endpointId) {
+        if (roomConfiguration != null) {
+            String payload = "inf " + roomConfiguration.toString();
+            sendPayload(endpointId, Payload.fromBytes(payload.getBytes()));
+        }
     }
 
     private void sendCurrentRoomInformation(String endpointId) {
