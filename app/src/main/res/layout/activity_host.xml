@@ -21,7 +21,7 @@
             android:focusableInTouchMode="true"
             android:focusable="true"
             tools:layout_editor_absoluteX="8dp"
-            tools:layout_editor_absoluteY="16dp"
+            tools:layout_editor_absoluteY="14dp"
             >
 
             <TableRow
@@ -60,22 +60,9 @@
             <TableRow
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:visibility="gone">
-
-                <View
-                    android:id="@+id/divider"
-                    android:layout_width="wrap_content"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="20dp"
-                    android:layout_marginBottom="10dp"
-                    android:background="@color/colorLighterBackground" />
-            </TableRow>
-
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_marginTop="30dp"
-                android:layout_marginBottom="20dp">
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"
+                android:visibility="visible">
 
                 <TextView
                     android:id="@+id/queueLabel"
@@ -83,7 +70,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
                     android:text="@string/queue_label"
-                    android:textColor="@color/inputLayoutLabel" />
+                    android:textColor="@color/defaultText" />
             </TableRow>
 
             <!--<TableRow-->
@@ -110,30 +97,49 @@
 
             <TableRow
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
->
+                android:layout_height="match_parent" >
 
                 <TextView
                     android:id="@+id/spotifySwitchText"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
+
                     android:layout_weight="1"
                     android:padding="0dp"
                     android:text="@string/spotify_switch_text"
                     android:textAlignment="viewStart"
+                    android:textColor="@color/white"
                     android:textSize="18sp" />
 
-                <Switch
-                    android:id="@+id/spotifySwitch"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="end"
-                    android:checked="false"
-                    android:padding="0dp"
-                    android:showText="false"
-                    android:thumb="@drawable/ic_spotify_logo"
-                    android:thumbTint="#ffffff"
-                    tools:checked="true" />
+                <FrameLayout
+                    android:id="@+id/switchProgressBarFrameLayout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:visibility="visible">
+
+                    <Switch
+                        android:id="@+id/spotifySwitch"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_gravity="end"
+                        android:checked="false"
+                        android:padding="0dp"
+                        android:showText="false"
+                        android:thumb="@drawable/ic_spotify_logo"
+                        android:thumbTint="#ffffff"
+                        android:visibility="visible"
+                        tools:checked="true" />
+
+                    <ProgressBar
+                        android:id="@+id/switchProgressBar"
+                        style="@style/Widget.AppCompat.ProgressBar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone" />
+
+                </FrameLayout>
+
             </TableRow>
 
             <TableRow
@@ -156,29 +162,37 @@
             <TableRow
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_marginTop="20dp"
-                android:visibility="invisible">
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"
+                android:visibility="visible">
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
+                    android:layout_marginStart="4dp"
+
                     android:layout_weight="1"
                     android:padding="0dp"
                     android:text="@string/vote_mode_text"
                     android:textAlignment="viewStart"
-                    android:textSize="18sp" />
+                    android:textColor="@color/defaultText" />
 
-                <Switch
-                    android:id="@+id/switch1"
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <Spinner
+                    android:id="@+id/skipModeDropdown"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="end"
-                    android:showText="false"
-                    android:splitTrack="false"
-                    android:textAllCaps="false"
-                    android:thumb="@drawable/ic_circle"
-                    tools:checked="true" />
-
+                    android:layout_marginStart="-4dp"
+                    android:layout_weight="1"
+                    android:dropDownWidth="match_parent"
+                    android:entries="@array/vote_mode_options"
+                    android:textColor="@color/defaultText"
+                    android:padding="0dp" />
             </TableRow>
 
         </TableLayout>
@@ -205,7 +219,7 @@
                 android:fontFamily="@font/fredoka_one"
                 android:onClick="cancelClicked"
                 android:text="@string/cancel_button_text"
-                tools:layout_editor_absoluteX="196dp"
+                tools:layout_editor_absoluteX="194dp"
                 tools:layout_editor_absoluteY="460dp" />
 
             <Button
@@ -221,7 +235,7 @@
                 android:fontFamily="@font/fredoka_one"
                 android:onClick="startClicked"
                 android:text="@string/start_button_text"
-                tools:layout_editor_absoluteX="196dp"
+                tools:layout_editor_absoluteX="194dp"
                 tools:layout_editor_absoluteY="460dp" />
         </LinearLayout>
 

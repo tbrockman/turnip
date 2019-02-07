@@ -2,6 +2,7 @@ package ca.turnip.turnip;
 
 import android.app.Activity;
 import android.app.Service;
+import android.bluetooth.BluetoothClass;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -44,8 +45,11 @@ import java.security.UnrecoverableEntryException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -77,6 +81,7 @@ public class BackgroundService extends Service {
     private boolean isHost;
     private boolean inRoom;
     private boolean isDiscovering = false;
+    public HashMap<String, Integer> votes = new HashMap<>();
 
     // Room configuration
     private RoomConfiguration roomConfiguration = null;
@@ -108,6 +113,8 @@ public class BackgroundService extends Service {
 
     private final ArrayList<String> connectedClients = new ArrayList();
     private final ArrayList<String> authenticatedClients = new ArrayList(); // TODO: password related
+    private final ArrayList<String> blacklistedClients = new ArrayList(); // TODO: rate-limiting
+    private Set<String> votedClients = Collections.synchronizedSet(new HashSet<String>());
     private final ArrayList<Endpoint> discoveredHosts = new ArrayList();
     private final OkHttpClient okHttpClient = new OkHttpClient();
     private String serverEndpoint;
@@ -154,6 +161,15 @@ public class BackgroundService extends Service {
         public void onSongPlaying(Song song) {
             emitSongPlaying(connectedClients, song);
             notifySongPlaying(song);
+            if (roomConfiguration.getSkipMode() != RoomConfiguration.NO_SKIP) {
+                if (votes != null) {
+                    votes.clear();
+                }
+
+                if (votedClients != null) {
+                    votedClients.clear();
+                }
+            }
         }
 
         @Override
@@ -224,7 +240,14 @@ public class BackgroundService extends Service {
         }
     }
 
+    public RoomConfiguration getRoomConfiguration() {
+        return this.roomConfiguration;
+    }
+
     public void setRoomConfiguration(RoomConfiguration roomConfiguration) {
+        if (roomConfiguration.getSkipMode() == RoomConfiguration.MAJORITY) {
+            votes = new HashMap<>();
+        }
         this.roomConfiguration = roomConfiguration;
     }
 
@@ -475,7 +498,12 @@ public class BackgroundService extends Service {
                             jsonString = raw.substring(4);
                             // TODO: generate salt, store hash of salt and password
                             // keeping salt, when first creating a room
-
+                            break;
+                        case "skp":
+                            String songURI = raw.substring(4);
+                            if (roomConfiguration.getSkipMode() != RoomConfiguration.NO_SKIP) {
+                                addSkipVote(songURI, endpointId);
+                            }
                             break;
                         default:
                             break;
@@ -612,6 +640,7 @@ public class BackgroundService extends Service {
 
             @Override
             public void onDisconnected(@NonNull String endpointId) {
+                authenticatedClients.remove(endpointId);
                 connectedClients.remove(endpointId);
                 Log.d(TAG, "Connection disconnected: " + endpointId);
             }
@@ -761,13 +790,6 @@ public class BackgroundService extends Service {
         }
     }
 
-    private void sendCurrentRoomInformation(String endpointId) {
-        if (roomInfo != null) {
-            String payload = "inf " + roomInfo.toString();
-            sendPayload(endpointId, Payload.fromBytes(payload.getBytes()));
-        }
-    }
-
     private void sendCurrentlyPlaying(String endpointId, Song song) {
         if (song != null) {
             String payload = "cur " + song.toString();
@@ -777,6 +799,39 @@ public class BackgroundService extends Service {
 
     private void sendSpotifyToken(String endpointId, String spotifyToken) {
         String payload = "tok " + spotifyToken;
+        sendPayload(endpointId, Payload.fromBytes(payload.getBytes()));
+    }
+
+    public void sendPassword(String endpointId, String password) {
+        String payload = "pwd " + password;
+        sendPayload(endpointId, Payload.fromBytes(payload.getBytes()));
+    }
+
+    private void addSkipVote(String songURI, String endpointId) {
+        if (songURI.equals(getCurrentlyPlaying().getString("uri")) &&
+            !votedClients.contains(endpointId)) {
+
+            Integer voteCount = 1;
+            if (votes.containsKey(songURI)) {
+                voteCount = votes.get(songURI);
+                votes.put(songURI, voteCount + 1);
+            }
+            else {
+                votes.put(songURI, voteCount);
+            }
+
+            votedClients.add(endpointId);
+
+            if (roomConfiguration.getSkipMode() == RoomConfiguration.MAJORITY) {
+                if (voteCount >= Math.floor(authenticatedClients.size() / 2)) {
+                    skipCurrentSong();
+                }
+            }
+        }
+    }
+
+    public void sendSkipSong(String endpointId, String songURI) {
+        String payload = "skp " + songURI;
         sendPayload(endpointId, Payload.fromBytes(payload.getBytes()));
     }
 
@@ -798,6 +853,10 @@ public class BackgroundService extends Service {
 
     public void skipCurrentSong() {
         jukebox.playNextSong();
+    }
+
+    public void voteSkip(Song song) {
+        sendSkipSong(serverEndpoint, song.getString("uri"));
     }
 
     private void sendClientSongQueue(String endpointId, ArrayList<Song> songQueue) {
@@ -862,7 +921,8 @@ public class BackgroundService extends Service {
     public synchronized void searchSpotifyAPI(String search, String type, Callback callback) {
         final Request request =
                 new Request.Builder()
-                           .url("https://api.spotify.com/v1/search?q=" + search + "*&type=" + type)
+                           .url("https://api.spotify.com/v1/search?q=" + search +
+                                "*&market=from_token&type=" + type)
                            .addHeader("Authorization", "Bearer " + spotifyAccessToken)
                            .addHeader("Accept", "application/json")
                            .build();

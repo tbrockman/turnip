@@ -1,7 +1,6 @@
 package ca.turnip.turnip;
 
 import android.app.Activity;
-import android.bluetooth.BluetoothClass;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -9,10 +8,14 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.DialogFragment;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.widget.ImageViewCompat;
 import android.support.v7.app.AlertDialog;
 import android.os.Bundle;
 import android.support.v7.widget.AppCompatImageView;
@@ -38,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 import static ca.turnip.turnip.RoomConfiguration.MAJORITY;
+import static ca.turnip.turnip.RoomConfiguration.NO_SKIP;
 
 
 public class RoomActivity extends BackgroundServiceConnectedActivity {
@@ -47,6 +51,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     // Constants
 
     static final CharSequence connectingToastText = "Connecting to host";
+    static final CharSequence voteSkipToastText = "Voting to skip";
 
     // Context
 
@@ -67,6 +72,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     private RecyclerView recyclerView;
     private SongQueueAdapter adapter;
     private Toast connectingToast;
+    private Toast voteSkipToast;
 
     // Currently playing
 
@@ -95,6 +101,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     // State information
 
     private boolean wasSearching = false;
+    private boolean votedToSkip = false;
 
     // Intent extras
 
@@ -120,8 +127,8 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
                     songQueue.remove(index);
                     adapter.notifyItemRemoved(index);
                 }
-                renderCurrentlyPlaying();
                 renderSongQueueEmpty();
+                renderCurrentlyPlaying();
             }
 
             @Override
@@ -152,7 +159,9 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
             @Override
             public void onConnect() {
                 connectingToast.cancel();
+                fillCurrentRoomConfiguration();
                 renderSongQueueEmpty();
+                renderCurrentlyPlaying();
             }
 
             @Override
@@ -238,7 +247,12 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
                     backgroundService.skipCurrentSong();
                 }
                 else {
-                    // TODO: vote to skip
+                    if (skipMode != NO_SKIP && !votedToSkip) {
+                        votedToSkip = true;
+                        createVoteSkipToast();
+                        renderCurrentlyPlaying();
+                        backgroundService.voteSkip(currentlyPlaying);
+                    }
                 }
             }
         });
@@ -265,8 +279,8 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(adapter);
 
-        renderCurrentlyPlaying();
         renderSongQueueEmpty();
+        renderCurrentlyPlaying();
     }
 
     @Override
@@ -275,8 +289,8 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         if (backgroundService != null) {
             backgroundService.onRoomResume(this);
             if (!wasSearching) {
-                setCurrentlyPlaying(backgroundService.getCurrentlyPlaying());
                 setSongQueue(backgroundService.getSongQueue());
+                setCurrentlyPlaying(backgroundService.getCurrentlyPlaying());
             }
         }
         wasSearching = false;
@@ -310,11 +324,6 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
             backgroundService.destroyRoom();
             unbindConnectionService();
         }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
     }
 
     @Override
@@ -383,16 +392,23 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         connectingToast.show();
     }
 
+    // Voting to skip Toast
+    private void createVoteSkipToast() {
+        voteSkipToast = Toast.makeText(this, voteSkipToastText, Toast.LENGTH_SHORT);
+        voteSkipToast.show();
+    }
+
     // Currently playing
 
     private void setCurrentlyPlaying(Song song) {
         if (song != null) {
+            votedToSkip = false;
             currentlyPlaying = song;
             timeElapsed = Integer.parseInt(currentlyPlaying.getString("timeElapsed"));
             songLength = Integer.parseInt(currentlyPlaying.getString("duration_ms")) / 1000;
+            renderSongQueueEmpty();
+            renderCurrentlyPlaying();
         }
-        renderCurrentlyPlaying();
-        renderSongQueueEmpty();
     }
 
     private void renderCurrentlyPlaying() {
@@ -401,8 +417,22 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
                 skipButton.setVisibility(View.GONE);
             }
             else {
-                if (isHost) {
+                if (isHost || skipMode != NO_SKIP) {
                     skipButton.setVisibility(View.VISIBLE);
+                    if (votedToSkip) {
+                        ImageViewCompat.setImageTintList(
+                                skipButton,
+                                ColorStateList.valueOf(ContextCompat.getColor(context,
+                                                                              R.color.spotifyGreen)
+                                )
+                        );
+                    } else {
+                        ImageViewCompat.setImageTintList(
+                                skipButton,
+                                ColorStateList.valueOf(ContextCompat.getColor(context,
+                                                                              R.color.white))
+                        );
+                    }
                 }
             }
 
@@ -454,8 +484,8 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     private void addSongToQueue(Song song) {
         songQueue.add(song);
         adapter.notifyItemInserted(songQueue.size() - 1);
-        renderCurrentlyPlaying();
         renderSongQueueEmpty();
+        renderCurrentlyPlaying();
     }
 
     private void setSongQueue(ArrayList<Song> queue) {
@@ -464,8 +494,8 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
             songQueue.add(queue.get(i));
         }
         adapter.notifyDataSetChanged();
-        renderCurrentlyPlaying();
         renderSongQueueEmpty();
+        renderCurrentlyPlaying();
     }
 
     private void renderSongQueueEmpty() {
@@ -497,7 +527,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
                     backgroundService.setUpJukebox(isHost);
 
                     if (isHost) {
-                        backgroundService.setRoomConfiguration(getCurrentRoomConfiguration());
+                        backgroundService.setRoomConfiguration(buildCurrentRoomConfiguration());
                         backgroundService.startAdvertising(roomName);
                         if (spotifyEnabled) {
                             backgroundService.subscribeAuthListener(authenticationListener);
@@ -527,6 +557,8 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         roomPassword = intent.getStringExtra("roomPassword");
         endpointId = intent.getStringExtra("endpointId");
         spotifyEnabled = intent.getBooleanExtra("spotifyEnabled", false);
+        skipMode = intent.getIntExtra("skipMode", MAJORITY);
+        Log.d(TAG, "skip mode here:" + String.valueOf(skipMode));
         return intent;
     }
 
@@ -577,7 +609,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         startActivityForResult(queueSong, MainActivity.ADD_SONG_REQUEST);
     }
 
-    private RoomConfiguration getCurrentRoomConfiguration() {
+    private RoomConfiguration buildCurrentRoomConfiguration() {
         PackageInfo pInfo = null;
         try {
             pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
@@ -592,5 +624,11 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
                                                                     roomName);
 
         return roomConfiguration;
+    }
+
+    private void fillCurrentRoomConfiguration() {
+        RoomConfiguration roomConfiguration = backgroundService.getRoomConfiguration();
+        spotifyEnabled = roomConfiguration.isSpotifyEnabled();
+        skipMode = roomConfiguration.getSkipMode();
     }
 }

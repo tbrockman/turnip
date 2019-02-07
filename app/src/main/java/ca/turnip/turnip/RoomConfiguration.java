@@ -7,6 +7,7 @@ import org.json.JSONObject;
 
 public class RoomConfiguration {
 
+    public static final int NO_SKIP = 0;
     public static final int MAJORITY = 1;
     public static final int PERCENTAGE = 2;
     private static final String TAG = RoomConfiguration.class.getSimpleName();

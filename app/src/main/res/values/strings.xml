@@ -9,10 +9,10 @@
     <string name="room_password_hint">Room password</string>
     <string name="spotify_logo">Spotify logo</string>
     <string name="spotify_switch_text">Play songs from Spotify</string>
-    <string name="vote_mode_text">Vote to skip</string>
+    <string name="vote_mode_text">Vote to skip mode</string>
     <string-array name="vote_mode_options">
-        <item>None</item>
         <item>Majority</item>
+        <item>None</item>
     </string-array>
     <string name="no_song_text_header">No one\'s playing anything</string>
     <string name="no_song_text_subtitle">Add some songs to get things started!</string>
@@ -44,7 +44,7 @@
     <string name="by_string">by</string>
     <string name="share_text">Share</string>
     <string name="open_in_spotify_text">Open in Spotify</string>
-    <string name="queue_label">Queue</string>
+    <string name="queue_label">Source</string>
     <string name="spotify_switch_error_text">Need at least one song source</string>
     <string name="host_string">Host</string>
 </resources>

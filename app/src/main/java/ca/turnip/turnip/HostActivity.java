@@ -1,5 +1,7 @@
 package ca.turnip.turnip;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
@@ -11,23 +13,23 @@ import android.support.design.widget.TextInputEditText;
 import android.support.design.widget.TextInputLayout;
 import android.support.v4.content.ContextCompat;
 import android.os.Bundle;
-import android.support.v4.view.animation.FastOutSlowInInterpolator;
 import android.support.v4.view.animation.LinearOutSlowInInterpolator;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
-import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
-import android.view.animation.AnticipateInterpolator;
-import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
+import android.view.animation.ScaleAnimation;
 import android.view.animation.TranslateAnimation;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ProgressBar;
+import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TableLayout;
 import android.widget.TextView;
@@ -48,6 +50,9 @@ import okhttp3.Response;
 import static ca.turnip.turnip.MainActivity.APP_REDIRECT_URI;
 import static ca.turnip.turnip.MainActivity.CLIENT_ID;
 import static ca.turnip.turnip.MainActivity.HOST_ROOM;
+import static ca.turnip.turnip.RoomConfiguration.MAJORITY;
+import static ca.turnip.turnip.RoomConfiguration.NO_SKIP;
+import static ca.turnip.turnip.RoomConfiguration.PERCENTAGE;
 
 public class HostActivity extends BackgroundServiceConnectedActivity {
 
@@ -61,11 +66,19 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
     private Boolean spotifyEnabled = false;
     private String spotifyRefreshToken;
 
-    // UI
+    // Room configuration
 
+    private int skipMode = MAJORITY;
+
+    // UI
+    private int shortAnimationDuration;
     private Animation labelErrorSlideInAnimation;
     private Button startButton;
     private ErrorDialog errorDialog;
+    private FrameLayout switchProgressBarFrameLayout;
+    private Interpolator linearOutSlowInInterpolator = new LinearOutSlowInInterpolator();
+    private ProgressBar switchProgressBar;
+    private Spinner skipModeDropdown;
     private SpotifyNotFoundDialog notFoundDialog;
     private Switch spotifySwitch;
     private TableLayout table;
@@ -96,7 +109,12 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
         initializeRoomNameField();
         initializeStartButton();
         initializeSwitch();
+        initializeSkipmodeDropdown();
         initializeTable();
+        initializeSwitchProgressBar();
+        initializeAnimations();
+
+        shortAnimationDuration = getResources().getInteger(android.R.integer.config_shortAnimTime);
     }
 
     @Override
@@ -142,30 +160,6 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
             }
         };
 
-        Interpolator linearOutSlowInInterpolator = new LinearOutSlowInInterpolator();
-
-        labelErrorSlideInAnimation = new TranslateAnimation(0, 0,
-                                                        -16, 0);
-        labelErrorSlideInAnimation.setDuration(217);
-        labelErrorSlideInAnimation.setInterpolator(linearOutSlowInInterpolator);
-        labelErrorSlideInAnimation.setAnimationListener(new Animation.AnimationListener() {
-            @Override
-            public void onAnimationStart(Animation animation) {
-                spotifySwitchErrorText.setVisibility(View.VISIBLE);
-                spotifySwitchText.setTextColor(getResources().getColor(R.color.inputLayoutLabelError));
-            }
-
-            @Override
-            public void onAnimationEnd(Animation animation) {
-
-            }
-
-            @Override
-            public void onAnimationRepeat(Animation animation) {
-
-            }
-        });
-
         if (backgroundService == null) {
             bindHostActivityConnectionService();
         } else {
@@ -175,6 +169,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
             validateSubmit(true);
         }
     }
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -221,6 +216,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
                 public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                     spotifySwitchDirty = true;
                     if (isChecked) {
+                        crossFadeAwaySwitch();
                         authenticateSpotify();
                     } else {
                         spotifyEnabled = false;
@@ -234,6 +230,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
             @Override
             public void run() {
                 spotifyEnabled = true;
+                crossFadeInSwitch();
                 validateSubmit(true);
             }
         });
@@ -280,9 +277,109 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
         spotifySwitchText = findViewById(R.id.spotifySwitchText);
     }
 
+    private void initializeSkipmodeDropdown() {
+        skipModeDropdown = findViewById(R.id.skipModeDropdown);
+        skipModeDropdown.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String text = skipModeDropdown.getSelectedItem().toString();
+                switch (text) {
+                    case "Majority":
+                        skipMode = MAJORITY;
+                        break;
+                    case "Percentage":
+                        skipMode = PERCENTAGE;
+                        break;
+                    case "None":
+                        Log.d(TAG, "setting no skip");
+                        skipMode = NO_SKIP;
+                        break;
+                    default:
+                        skipMode = MAJORITY;
+                        break;
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+    }
+
     private void initializeStartButton() {
         startButton = findViewById(R.id.startButton);
         disableButton(startButton);
+    }
+
+    private void initializeSwitchProgressBar() {
+        switchProgressBar = findViewById(R.id.switchProgressBar);
+        switchProgressBar.setVisibility(View.GONE);
+    }
+
+
+    private void initializeAnimations() {
+        labelErrorSlideInAnimation = new TranslateAnimation(0, 0,
+                -16, 0);
+        labelErrorSlideInAnimation.setDuration(210);
+        labelErrorSlideInAnimation.setInterpolator(linearOutSlowInInterpolator);
+        labelErrorSlideInAnimation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+                spotifySwitchErrorText.setVisibility(View.VISIBLE);
+                spotifySwitchText.setTextColor(getResources().getColor(R.color.inputLayoutLabelError));
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
+    }
+
+    private void crossFadeAwaySwitch() {
+        switchProgressBar.setAlpha(0f);
+        switchProgressBar.setVisibility(View.VISIBLE);
+        switchProgressBar.animate()
+                         .alpha(1f)
+                         .setDuration(shortAnimationDuration)
+                         .setListener(null);
+
+        spotifySwitch.animate()
+                     .alpha(0f)
+                     .setDuration(shortAnimationDuration)
+                     .setListener(new AnimatorListenerAdapter() {
+                         @Override
+                         public void onAnimationEnd(Animator animation) {
+                             super.onAnimationEnd(animation);
+                             spotifySwitch.setVisibility(View.GONE);
+                         }
+                     });
+    }
+
+    private void crossFadeInSwitch() {
+        spotifySwitch.setAlpha(0f);
+        spotifySwitch.setVisibility(View.VISIBLE);
+        spotifySwitch.animate()
+                     .alpha(1f)
+                     .setDuration(shortAnimationDuration)
+                     .setListener(null);
+
+        switchProgressBar.animate()
+                         .alpha(0f)
+                         .setDuration(shortAnimationDuration)
+                         .setListener(new AnimatorListenerAdapter() {
+                            @Override
+                            public void onAnimationEnd(Animator animation) {
+                                super.onAnimationEnd(animation);
+                                switchProgressBar.setVisibility(View.GONE);
+                            }
+                         });
     }
 
     private void showRoomNameError() {
@@ -492,6 +589,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
 //        roomIntent.putExtra("roomPassword", roomPassword.getText().toString());
             roomIntent.putExtra("isHost", true);
             roomIntent.putExtra("spotifyEnabled", spotifyEnabled);
+            roomIntent.putExtra("skipMode", skipMode);
             startActivityForResult (roomIntent, HOST_ROOM);
         } else {
 

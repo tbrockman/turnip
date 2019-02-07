@@ -246,6 +246,7 @@ public class SongSearchActivity extends BackgroundServiceConnectedActivity {
                         final JSONObject jsonResponse = new JSONObject(response.body().string());
                         final JSONObject tracks = jsonResponse.getJSONObject("tracks");
                         final JSONArray jsonArray = tracks.getJSONArray("items");
+                        Log.i(TAG, jsonResponse.toString());
                         //Log.i(TAG, jsonArray.getJSONObject(0).getJSONObject("external_urls").getString("spotify"));
 
                         if (tracks.has("next")) {
