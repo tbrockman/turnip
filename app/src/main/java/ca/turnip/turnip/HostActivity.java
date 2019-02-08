@@ -416,7 +416,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
         if (spotifySwitchError) {
             spotifySwitchError = false;
             spotifyErrorShowing = false;
-            spotifySwitchText.setTextColor(getResources().getColor(R.color.defaultText));
+            spotifySwitchText.setTextColor(getResources().getColor(R.color.white));
             spotifySwitchErrorText.setVisibility(View.INVISIBLE);
         }
     }
