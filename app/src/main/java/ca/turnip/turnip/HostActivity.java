@@ -5,6 +5,7 @@ import android.animation.AnimatorListenerAdapter;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.res.ColorStateList;
@@ -225,6 +226,15 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
                 }
             };
 
+    DialogInterface.OnClickListener switchDialogClickListener = new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            spotifyEnabled = false;
+            spotifySwitch.setChecked(false);
+            crossFadeInSwitch();
+        }
+    };
+
     private void handleSpotifyAuthSuccess() {
         runOnUiThread(new Runnable() {
             @Override
@@ -241,14 +251,14 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                spotifyEnabled = false;
-                spotifySwitch.setChecked(false);
+
                 if (Utils.isNetworkAvailable(context)) {
-                    errorDialog = new ErrorDialog(activity,"Authentication error", "Unable to retrieve necessary permissions from Spotify.");
+                    errorDialog = new ErrorDialog(activity,"Authentication error", "Unable to retrieve necessary permissions from Spotify.", switchDialogClickListener);
                 }
                 else {
-                    errorDialog = new ErrorDialog(activity, "Network error", "Unable to establish network connection to Spotify.");
+                    errorDialog = new ErrorDialog(activity, "Network error", "Unable to establish network connection to Spotify.", switchDialogClickListener);
                 }
+
             }
         });
     }
