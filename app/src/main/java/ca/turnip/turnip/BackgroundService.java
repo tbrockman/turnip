@@ -954,6 +954,10 @@ public class BackgroundService extends Service {
 
     public boolean spotifyIsAuthenticated() {
         Date now = new Date();
+
+        if (spotifyExpirationDate == null) {
+            return false;
+        }
         return now.before(spotifyExpirationDate);
     }
 

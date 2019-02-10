@@ -17,7 +17,7 @@ public class Jukebox {
     private boolean isPlaying;
     private int timeElapsed;
     private JukeboxListener jukeboxListener;
-    private final Handler songTimerHandler = new Handler();
+    private final Handler songTimerHandler;
     private final Runnable songTimer =  new Runnable() {
         @Override
         public void run() {
@@ -34,6 +34,7 @@ public class Jukebox {
     public Jukebox(JukeboxListener jukeboxListener) {
         this.songQueue = new ArrayList<>();
         this.jukeboxListener = jukeboxListener;
+        this.songTimerHandler = new Handler();
     }
 
     public Song getCurrentlyPlaying() {
