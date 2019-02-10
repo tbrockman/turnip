@@ -1,5 +1,7 @@
 package ca.turnip.turnip;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
@@ -97,6 +99,10 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     // Skip mode
 
     private int skipMode = MAJORITY;
+
+    // Animation duration
+
+    private int shortAnimationDuration;
 
     // State information
 
@@ -228,6 +234,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         bindRoomActivityConnectionService();
 
         hostActivityIntent = assignIntentVariables();
+        shortAnimationDuration = getResources().getInteger(android.R.integer.config_shortAnimTime);
 
         setTitle(roomName);
 
@@ -508,7 +515,19 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         }
         else {
             loadingRoomSpinnerLayout.setVisibility(View.GONE);
-            noSongsContainer.setVisibility(View.GONE);
+            if (noSongsContainer.getVisibility() == View.VISIBLE) {
+
+                noSongsContainer.animate()
+                        .alpha(0f)
+                        .setDuration(shortAnimationDuration)
+                        .setListener(new AnimatorListenerAdapter() {
+                            @Override
+                            public void onAnimationEnd(Animator animation) {
+                                super.onAnimationEnd(animation);
+                                noSongsContainer.setVisibility(View.GONE);
+                            }
+                        });
+            }
         }
     }
 
