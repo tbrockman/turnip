@@ -1010,17 +1010,25 @@ public class BackgroundService extends Service {
         }
 
         @Override
-        public void onResponse(Call call, Response response) throws IOException {
+        public void onResponse(Call call, Response response) {
             try {
                 final JSONObject jsonResponse = new JSONObject(response.body().string());
                 Log.d(TAG, jsonResponse.toString());
-                spotifyExpiresIn = Integer.valueOf(jsonResponse.getString("expires_in"));
-                setSpotifyAccessToken(jsonResponse.getString("access_token"));
-                setSpotifyTokenExpiration(spotifyExpiresIn);
-                // refresh 5 minutes before token expiry
-                spotifyTimerHandler.postDelayed(spotifyRefreshTokenTimer,
-                                      (spotifyExpiresIn-300) * 1000);
-                notifyAuthSuccessful();
+                Boolean hasError = jsonResponse.has("error");
+
+                if (hasError) {
+                    removeStoredSpotifyRefreshToken();
+                    notifyAuthFailed();
+                }
+                else {
+                    spotifyExpiresIn = Integer.valueOf(jsonResponse.getString("expires_in"));
+                    setSpotifyAccessToken(jsonResponse.getString("access_token"));
+                    setSpotifyTokenExpiration(spotifyExpiresIn);
+                    // refresh 5 minutes before token expiry
+                    spotifyTimerHandler.postDelayed(spotifyRefreshTokenTimer,
+                            (spotifyExpiresIn-300) * 1000);
+                    notifyAuthSuccessful();
+                }
             } catch (Exception e) {
                 notifyAuthFailed();
                 Log.e(TAG, "Error parsing/emitting access token: " + e.toString());
@@ -1037,18 +1045,26 @@ public class BackgroundService extends Service {
         }
 
         @Override
-        public void onResponse(Call call, Response response) throws IOException {
+        public void onResponse(Call call, Response response) {
             // TODO: store access and refresh tokens on device
             try {
                 final JSONObject jsonResponse = new JSONObject(response.body().string());
                 Log.d(TAG, jsonResponse.toString());
-                spotifyExpiresIn = Integer.valueOf(jsonResponse.getString("expires_in"));
-                setSpotifyRefreshToken(jsonResponse.getString("refresh_token"));
-                setSpotifyAccessToken(jsonResponse.getString("access_token"));
-                setSpotifyTokenExpiration(spotifyExpiresIn);
-                spotifyTimerHandler.postDelayed(spotifyRefreshTokenTimer,
-                                      (spotifyExpiresIn-300) * 1000);
-                notifyAuthSuccessful();
+                Boolean hasError = jsonResponse.has("error");
+
+                if (hasError) {
+                    removeStoredSpotifyRefreshToken();
+                    notifyAuthFailed();
+                }
+                else {
+                    spotifyExpiresIn = Integer.valueOf(jsonResponse.getString("expires_in"));
+                    setSpotifyRefreshToken(jsonResponse.getString("refresh_token"));
+                    setSpotifyAccessToken(jsonResponse.getString("access_token"));
+                    setSpotifyTokenExpiration(spotifyExpiresIn);
+                    spotifyTimerHandler.postDelayed(spotifyRefreshTokenTimer,
+                            (spotifyExpiresIn-300) * 1000);
+                    notifyAuthSuccessful();
+                }
             } catch (Exception e) {
                 notifyAuthFailed();
                 Log.e(TAG, "Error parsing/emitting access token: " + e.toString());

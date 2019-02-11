@@ -64,7 +64,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
 
     // Spotify
 
-    private Boolean spotifyEnabled = false;
+    private boolean spotifyEnabled = false;
     private String spotifyRefreshToken;
 
     // Room configuration
@@ -72,6 +72,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
     private int skipMode = MAJORITY;
 
     // UI
+
     private int shortAnimationDuration;
     private Animation labelErrorSlideInAnimation;
     private Button startButton;
@@ -94,11 +95,13 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
     private boolean roomNameDirty = false;
     private boolean roomNameError = false;
     private boolean spotifySwitchDirty = false;
+    private boolean spotifySwitchPending = false;
     private boolean spotifySwitchError = false;
     private boolean spotifyErrorShowing = false;
     private boolean startButtonEnabled = false;
 
     // Authentication listener
+
     private AuthenticationListener authenticationListener;
 
     @Override
@@ -217,6 +220,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
                 public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                     spotifySwitchDirty = true;
                     if (isChecked) {
+                        spotifySwitchPending = true;
                         crossFadeAwaySwitch();
                         authenticateSpotify();
                     } else {
@@ -240,6 +244,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
             @Override
             public void run() {
                 spotifyEnabled = true;
+                spotifySwitchPending = false;
                 crossFadeInSwitch();
                 validateSubmit(true);
             }
@@ -251,14 +256,12 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-
                 if (Utils.isNetworkAvailable(context)) {
                     errorDialog = new ErrorDialog(activity,"Authentication error", "Unable to retrieve necessary permissions from Spotify.", switchDialogClickListener);
                 }
                 else {
                     errorDialog = new ErrorDialog(activity, "Network error", "Unable to establish network connection to Spotify.", switchDialogClickListener);
                 }
-
             }
         });
     }
@@ -396,6 +399,8 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
         roomNameInputLayout.setHelperTextEnabled(false);
         roomNameInputLayout.setHelperText(null);
         roomNameInputLayout.setError(getResources().getText(R.string.room_name_error));
+
+
     }
 
     private void clearRoomNameError() {
@@ -437,7 +442,7 @@ public class HostActivity extends BackgroundServiceConnectedActivity {
         if (!spotifyEnabled) {
             if (spotifyErrorShowing) return;
             spotifySwitchError = true;
-            if (checkDirty && !spotifySwitchDirty) return;
+            if ((checkDirty && !spotifySwitchDirty) || spotifySwitchPending) return;
             showSpotifySwitchError();
         }
         else {

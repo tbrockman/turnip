@@ -11,12 +11,12 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
-import android.graphics.Color;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.view.animation.LinearOutSlowInInterpolator;
 import android.support.v4.widget.ImageViewCompat;
 import android.support.v7.app.AlertDialog;
 import android.os.Bundle;
@@ -99,10 +99,6 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     // Skip mode
 
     private int skipMode = MAJORITY;
-
-    // Animation duration
-
-    private int shortAnimationDuration;
 
     // State information
 
@@ -212,7 +208,6 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     AuthenticationListener authenticationListener = new AuthenticationListener() {
         @Override
         public void onTokenSuccess() {
-
         }
 
         @Override
@@ -234,7 +229,6 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         bindRoomActivityConnectionService();
 
         hostActivityIntent = assignIntentVariables();
-        shortAnimationDuration = getResources().getInteger(android.R.integer.config_shortAnimTime);
 
         setTitle(roomName);
 
@@ -468,7 +462,6 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
                 }
                 artist.setText(currentlyPlaying.getArtistsAsString());
                 songName.setText(currentlyPlaying.getString("name"));
-                currentSongContainer.setVisibility(View.VISIBLE);
                 renderCurrentlyPlayingProgress();
             }
         }
@@ -505,6 +498,28 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         renderCurrentlyPlaying();
     }
 
+
+    private AnimatorListenerAdapter currentSongAnimationAdapter = new AnimatorListenerAdapter() {
+        @Override
+        public void onAnimationEnd(Animator animation) {
+            super.onAnimationEnd(animation);
+            currentSongContainer.setVisibility(View.VISIBLE);
+        }
+    };
+
+    private AnimatorListenerAdapter noSongAnimationAdapter = new AnimatorListenerAdapter() {
+        @Override
+        public void onAnimationEnd(Animator animation) {
+            super.onAnimationEnd(animation);
+            noSongsContainer.setVisibility(View.GONE);
+            currentSongContainer.setVisibility(View.VISIBLE);
+            currentSongContainer.animate()
+                                .alpha(1f)
+                                .setDuration(250)
+                                .setListener(currentSongAnimationAdapter);
+        }
+    };
+
     private void renderSongQueueEmpty() {
         if (currentlyPlaying == null) {
             if (isHost ||
@@ -518,15 +533,9 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
             if (noSongsContainer.getVisibility() == View.VISIBLE) {
 
                 noSongsContainer.animate()
-                        .alpha(0f)
-                        .setDuration(shortAnimationDuration)
-                        .setListener(new AnimatorListenerAdapter() {
-                            @Override
-                            public void onAnimationEnd(Animator animation) {
-                                super.onAnimationEnd(animation);
-                                noSongsContainer.setVisibility(View.GONE);
-                            }
-                        });
+                                .alpha(0f)
+                                .setDuration(175)
+                                .setListener(noSongAnimationAdapter);
             }
         }
     }
