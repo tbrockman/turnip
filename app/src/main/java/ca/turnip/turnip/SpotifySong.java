@@ -8,6 +8,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Date;
 
 class SpotifySong extends Song {
 
@@ -41,6 +42,15 @@ class SpotifySong extends Song {
     void setTimeElapsed(int timeElapsed) {
         try {
             jsonSong.put("timeElapsed", String.valueOf(timeElapsed));
+        } catch (JSONException e) {
+            Log.e(TAG, "Error setting time elapsed on song: " + e.toString());
+        }
+    }
+
+    @Override
+    void setLastPlayed(Date now) {
+        try {
+            jsonSong.put("lastPlayed", new Date().toString());
         } catch (JSONException e) {
             Log.e(TAG, "Error setting time elapsed on song: " + e.toString());
         }

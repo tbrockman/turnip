@@ -12,18 +12,20 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.os.IBinder;
-import android.support.annotation.NonNull;
-import android.support.design.widget.FloatingActionButton;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.view.animation.LinearOutSlowInInterpolator;
-import android.support.v4.widget.ImageViewCompat;
-import android.support.v7.app.AlertDialog;
+
+import androidx.annotation.NonNull;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import androidx.fragment.app.DialogFragment;
+import androidx.core.content.ContextCompat;
+import androidx.interpolator.view.animation.LinearOutSlowInInterpolator;
+import androidx.core.widget.ImageViewCompat;
+import androidx.appcompat.app.AlertDialog;
 import android.os.Bundle;
-import android.support.v7.widget.AppCompatImageView;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
+import androidx.appcompat.widget.AppCompatImageView;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import android.util.Log;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -54,6 +56,9 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
     static final CharSequence connectingToastText = "Connecting to host";
     static final CharSequence voteSkipToastText = "Voting to skip";
+    static final String spotifyAuthFailedText =
+            "Client failed to authenticate with Spotify. Possible causes could be network connectivity issues or invalid Spotify credentials.";
+    static final String spotifyAuthFailedTitle = "Authentication failed";
 
     // Context
 
@@ -215,7 +220,10 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    spotifyTokenFailure = new ErrorDialog(activity, "Authentication failed", "Client failed to authenticate with Spotify. Possible causes could be network connectivity issues or invalid Spotify credentials.", true);
+                    spotifyTokenFailure = new ErrorDialog(activity,
+                                                          spotifyAuthFailedTitle,
+                                                          spotifyAuthFailedText,
+                                               true);
                 }
             });
         }
@@ -226,7 +234,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_room);
 
-        bindRoomActivityConnectionService();
+        bindRoomActivityConnectionService(savedInstanceState == null);
 
         hostActivityIntent = assignIntentVariables();
 
@@ -298,10 +306,19 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate( R.menu.room_menu, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home:
                 onBackPressed();
+                break;
+            case R.id.settings_icon:
+                startSettingsActivity();
                 break;
         }
         return true;
@@ -311,6 +328,11 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
     public void onBackPressed () {
         // TODO: display toast confirming navigation away
         dialog.show();
+    }
+
+    private void startSettingsActivity() {
+        Intent settings = new Intent(this, SettingsActivity.class);
+        startActivity(settings);
     }
 
     @Override
@@ -544,7 +566,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         return String.format(Locale.US, "%01d:%02d", seconds / 60, seconds % 60);
     }
 
-    private void bindRoomActivityConnectionService() {
+    private void bindRoomActivityConnectionService(final Boolean isStarting) {
         connection = new ServiceConnection() {
 
             @Override
@@ -552,7 +574,10 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
                 backgroundService = ((BackgroundService.LocalBinder)service).getService();
 
                 if (backgroundService != null) {
-                    backgroundService.setUpJukebox(isHost);
+
+                    if (isStarting) {
+                        backgroundService.setUpJukebox(isHost);
+                    }
 
                     if (isHost) {
                         backgroundService.setRoomConfiguration(buildCurrentRoomConfiguration());
@@ -645,11 +670,12 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
             e.printStackTrace();
         }
 
-        RoomConfiguration roomConfiguration = new RoomConfiguration(roomPassword != null,
-                                                                    spotifyEnabled,
-                                                                    skipMode,
-                                                                    pInfo.versionCode,
-                                                                    roomName);
+        RoomConfiguration roomConfiguration =
+                new RoomConfiguration(roomPassword != null,
+                                                     spotifyEnabled,
+                                                     skipMode,
+                                                     pInfo.versionCode,
+                                                     roomName);
 
         return roomConfiguration;
     }

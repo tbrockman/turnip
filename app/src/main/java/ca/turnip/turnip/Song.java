@@ -6,12 +6,15 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Date;
 
 // Wrapper for our JSON songs
 public abstract class Song {
-    JSONObject jsonSong;
+
     Bitmap albumArt;
+    JSONObject jsonSong;
 
     protected Song(JSONObject jsonSong, String type) {
         try {
@@ -22,17 +25,18 @@ public abstract class Song {
         this.jsonSong = jsonSong;
     }
 
-    abstract JSONObject get(String key);
-    abstract String getString(String key);
+    abstract ArrayList<String> getArtists();
     abstract boolean has(String key);
     abstract JSONArray getArray(String key);
-    abstract void setTimeElapsed(int timeElapsed);
+    abstract JSONObject get(String key);
     abstract String getAlbumName();
     abstract String getAlbumArtURL(String size) throws JSONException;
-    abstract ArrayList<String> getArtists();
     abstract String getArtistsAsString();
     abstract String getSongType();
     abstract String getSongTitle();
+    abstract String getString(String key);
     abstract String getSongTypeName();
     abstract String getExternalLink();
+    abstract void setTimeElapsed(int timeElapsed);
+    abstract void setLastPlayed(Date now);
 }

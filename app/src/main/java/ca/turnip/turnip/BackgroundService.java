@@ -2,7 +2,6 @@ package ca.turnip.turnip;
 
 import android.app.Activity;
 import android.app.Service;
-import android.bluetooth.BluetoothClass;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -10,7 +9,9 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
+
+import android.preference.PreferenceManager;
 import android.util.Base64;
 import android.util.Log;
 
@@ -81,7 +82,8 @@ public class BackgroundService extends Service {
     private boolean isHost;
     private boolean inRoom;
     private boolean isDiscovering = false;
-    public HashMap<String, Integer> votes = new HashMap<>();
+    private HashMap<String, Integer> votes = new HashMap<>();
+    private SongHistory songHistory;
 
     // Room configuration
     private RoomConfiguration roomConfiguration = null;
@@ -105,7 +107,6 @@ public class BackgroundService extends Service {
         @Override
         public void run() {
             ((ServerJukebox) jukebox).playSongAddedBySpotify(added);
-            emitSongPlaying(connectedClients, added);
         }
     }
 
@@ -159,6 +160,15 @@ public class BackgroundService extends Service {
     private JukeboxListener jukeboxListener = new JukeboxListener() {
         @Override
         public void onSongPlaying(Song song) {
+
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            Boolean saveSongs = prefs.getBoolean("save_queue", false);
+
+            if (saveSongs) {
+                songHistory.addSong(song);
+                songHistory.writeToDisk();
+            }
+
             emitSongPlaying(connectedClients, song);
             notifySongPlaying(song);
             if (roomConfiguration.getSkipMode() != RoomConfiguration.NO_SKIP) {
@@ -215,6 +225,7 @@ public class BackgroundService extends Service {
     public IBinder onBind(Intent intent) {
         context = this;
         connectionsClient = Nearby.getConnectionsClient(context);
+        songHistory = new SongHistory(context);
         encryptor = new Encryptor();
         try {
             decryptor = new Decryptor();

@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 
 public class Jukebox {
@@ -70,14 +71,15 @@ public class Jukebox {
             }
         }
 
-        currentlyPlaying = song;
-        if (currentlyPlaying.has("timeElapsed")) {
-            setTimeElapsed(Integer.parseInt(currentlyPlaying.getString("timeElapsed")));
+        this.currentlyPlaying = song;
+        this.currentlyPlaying.setLastPlayed(new Date());
+        if (this.currentlyPlaying.has("timeElapsed")) {
+            setTimeElapsed(Integer.parseInt(this.currentlyPlaying.getString("timeElapsed")));
         }
         else {
             setTimeElapsed(0);
         }
-        jukeboxListener.onSongPlaying(currentlyPlaying);
+        jukeboxListener.onSongPlaying(this.currentlyPlaying);
         songTimerHandler.removeCallbacks(songTimer);
         resetTimer();
         startTimer();

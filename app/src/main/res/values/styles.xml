@@ -5,12 +5,17 @@
         <!-- Customize your theme here. -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
+        <item name="preferenceTheme">@style/PreferenceScreenTheme</item>
     </style>
 
     <style name="AppActionBarActivityTheme" parent="@style/Theme.AppCompat">
         <item name="android:actionBarStyle">@style/ActionBarStyle</item>
         <item name="actionBarStyle">@style/ActionBarStyle</item>
+    </style>
+
+    <style name="PreferenceScreenTheme" parent="AppActionBarActivityTheme">
+        <item name="android:windowBackground">@color/colorBackground</item>
+        <item name="android:cacheColorHint">@color/colorBackground</item>
     </style>
 
     <style name="SearchViewStyle" parent="Widget.AppCompat.SearchView">

@@ -38,8 +38,10 @@
             android:label="@string/title_activity_host"
             android:parentActivityName=".MainActivity"
             android:theme="@style/AppActionBarActivityTheme" />
-        <!-- TODO: allow room to re-orient,
-        need to create horizontal song info dialog fragment to do so -->
+        <!--
+        TODO: allow room to re-orient,
+        need to create horizontal song info dialog fragment to do so
+        -->
         <activity
             android:name=".RoomActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
@@ -63,6 +65,10 @@
                 <action android:name="android.intent.action.SEARCH" />
             </intent-filter>
         </activity>
+        <activity android:name=".SettingsActivity"
+            android:theme="@style/PreferenceScreenTheme"
+            android:parentActivityName=".RoomActivity"
+            android:label="Settings"></activity>
     </application>
 
 </manifest>

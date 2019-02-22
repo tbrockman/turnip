@@ -47,4 +47,5 @@
     <string name="queue_label">Source</string>
     <string name="spotify_switch_error_text">Need at least one song source</string>
     <string name="host_string">Host</string>
+    <string name="settings_title">Settings</string>
 </resources>
