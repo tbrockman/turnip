@@ -13,6 +13,7 @@
             android:key="save_queue"
             android:title="Store song queue"
             android:summary="Save information about songs played while you're connected"
+            android:defaultValue="true"
             android:iconSpaceReserved="false"
             app:iconSpaceReserved="false"/>
 

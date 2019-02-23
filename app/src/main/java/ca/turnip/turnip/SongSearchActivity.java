@@ -300,6 +300,13 @@ public class SongSearchActivity extends BackgroundServiceConnectedActivity {
             @Override
             public void onServiceConnected(ComponentName name, IBinder service) {
                 backgroundService = ((BackgroundService.LocalBinder)service).getService();
+                if (backgroundService != null) {
+                    if (backgroundService.songHistoryIsEnabled()) {
+                        ArrayList<Song> sortedHistory = backgroundService.getSongHistoryList();
+                        songs.addAll(sortedHistory);
+                        songSearchResultsAdapter.notifyDataSetChanged();
+                    }
+                }
             }
 
             @Override

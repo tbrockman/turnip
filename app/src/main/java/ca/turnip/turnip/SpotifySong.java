@@ -7,12 +7,16 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
 class SpotifySong extends Song {
 
     private static final String TAG = SpotifySong.class.getSimpleName();
+    DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
 
     public SpotifySong(JSONObject jsonSong) {
         super(jsonSong, "spotify");
@@ -38,6 +42,25 @@ class SpotifySong extends Song {
         }
     }
 
+    public int compareTo(Song other) {
+        Date lastPlayed = getLastPlayed();
+        Date otherLastPlayed = other.getLastPlayed();
+
+        if (lastPlayed == otherLastPlayed) {
+            return 0;
+        }
+
+        if (lastPlayed == null) {
+            return 1;
+        }
+
+        if (otherLastPlayed == null) {
+            return -1;
+        }
+
+        return otherLastPlayed.compareTo(lastPlayed); // descending order
+    }
+
     @Override
     void setTimeElapsed(int timeElapsed) {
         try {
@@ -48,9 +71,24 @@ class SpotifySong extends Song {
     }
 
     @Override
+    public Date getLastPlayed() {
+        Date lastPlayed;
+        try {
+            String lastPlayedString = jsonSong.getString("lastPlayed");
+            lastPlayed = dateFormat.parse(lastPlayedString);
+        } catch (JSONException e) {
+            lastPlayed = null;
+        } catch (ParseException e) {
+            lastPlayed = null;
+        }
+        return lastPlayed;
+    }
+
+    @Override
     void setLastPlayed(Date now) {
         try {
-            jsonSong.put("lastPlayed", new Date().toString());
+            String stringDate = dateFormat.format(now);
+            jsonSong.put("lastPlayed", stringDate);
         } catch (JSONException e) {
             Log.e(TAG, "Error setting time elapsed on song: " + e.toString());
         }

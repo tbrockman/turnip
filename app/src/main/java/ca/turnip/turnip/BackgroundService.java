@@ -161,16 +161,14 @@ public class BackgroundService extends Service {
         @Override
         public void onSongPlaying(Song song) {
 
-            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-            Boolean saveSongs = prefs.getBoolean("save_queue", false);
-
-            if (saveSongs) {
+            if (songHistoryIsEnabled()) {
                 songHistory.addSong(song);
                 songHistory.writeToDisk();
             }
 
             emitSongPlaying(connectedClients, song);
             notifySongPlaying(song);
+
             if (roomConfiguration.getSkipMode() != RoomConfiguration.NO_SKIP) {
                 if (votes != null) {
                     votes.clear();
@@ -658,8 +656,8 @@ public class BackgroundService extends Service {
         };
 
     private void sendClientSongsAndToken(@NonNull String endpointId) {
-        sendCurrentlyPlaying(endpointId, jukebox.getCurrentlyPlaying());
         sendSpotifyToken(endpointId, spotifyAccessToken);
+        sendCurrentlyPlaying(endpointId, jukebox.getCurrentlyPlaying());
         if (jukebox.getSongQueueLength() > 0) {
             sendClientSongQueue(endpointId, jukebox.getSongQueue());
         }
@@ -1115,6 +1113,17 @@ public class BackgroundService extends Service {
                 notifyAuthFailed();
             }
         }
+    }
+
+    // Song history public methods for Room Activity
+
+    public ArrayList<Song> getSongHistoryList() {
+        return songHistory.toSortedArrayList();
+    }
+
+    public Boolean songHistoryIsEnabled() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        return prefs.getBoolean("save_queue", false);
     }
 
     // Room Activity jukebox accessing functions

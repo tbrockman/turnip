@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.Date;
 
 // Wrapper for our JSON songs
-public abstract class Song {
+public abstract class Song implements Comparable<Song> {
 
     Bitmap albumArt;
     JSONObject jsonSong;
@@ -27,8 +27,10 @@ public abstract class Song {
 
     abstract ArrayList<String> getArtists();
     abstract boolean has(String key);
+    abstract Date getLastPlayed();
     abstract JSONArray getArray(String key);
     abstract JSONObject get(String key);
+    abstract public int compareTo(Song other);
     abstract String getAlbumName();
     abstract String getAlbumArtURL(String size) throws JSONException;
     abstract String getArtistsAsString();

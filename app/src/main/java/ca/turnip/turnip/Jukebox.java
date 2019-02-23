@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 
@@ -72,7 +73,7 @@ public class Jukebox {
         }
 
         this.currentlyPlaying = song;
-        this.currentlyPlaying.setLastPlayed(new Date());
+        this.currentlyPlaying.setLastPlayed(Calendar.getInstance().getTime());
         if (this.currentlyPlaying.has("timeElapsed")) {
             setTimeElapsed(Integer.parseInt(this.currentlyPlaying.getString("timeElapsed")));
         }

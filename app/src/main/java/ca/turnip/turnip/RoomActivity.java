@@ -427,8 +427,9 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
         if (song != null) {
             votedToSkip = false;
             currentlyPlaying = song;
-            timeElapsed = Integer.parseInt(currentlyPlaying.getString("timeElapsed"));
-            songLength = Integer.parseInt(currentlyPlaying.getString("duration_ms")) / 1000;
+            timeElapsed = Integer.parseInt(song.getString("timeElapsed"));
+            Log.i(TAG, "time elapsed on new song:" + String.valueOf(timeElapsed));
+            songLength = Integer.parseInt(song.getString("duration_ms")) / 1000;
             renderSongQueueEmpty();
             renderCurrentlyPlaying();
         }
