@@ -4,14 +4,10 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.text.method.DigitsKeyListener;
-import android.widget.EditText;
 
-import androidx.preference.EditTextPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
-import androidx.preference.PreferenceViewHolder;
 
 public class SettingsFragment extends PreferenceFragmentCompat {
 
@@ -34,11 +30,6 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(hostActivity);
         Boolean saveQueue = prefs.getBoolean("save_queue", false);
         saveQueueLengthPref.setEnabled(saveQueue);
-    }
-
-    @Override
-    public void onDisplayPreferenceDialog(Preference preference) {
-        super.onDisplayPreferenceDialog(preference);
     }
 
     @Override

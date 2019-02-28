@@ -12,7 +12,7 @@
         <SwitchPreferenceCompat
             android:key="save_queue"
             android:title="Store songs played"
-            android:summary="Save the songs that play while you're connected to this room"
+            android:summary="Save information about the songs that play while you're connected to this room"
             android:defaultValue="true"
             android:iconSpaceReserved="false"
             app:iconSpaceReserved="false" />

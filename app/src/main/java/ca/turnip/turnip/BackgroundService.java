@@ -163,7 +163,6 @@ public class BackgroundService extends Service {
 
             if (songHistoryIsEnabled()) {
                 songHistory.addSong(song);
-                songHistory.writeToDisk();
             }
 
             emitSongPlaying(connectedClients, song);
@@ -1118,7 +1117,7 @@ public class BackgroundService extends Service {
     // Song history public methods for Room Activity
 
     public ArrayList<Song> getSongHistoryList() {
-        return songHistory.toSortedArrayList();
+        return songHistory.getSongHistoryList();
     }
 
     public Boolean songHistoryIsEnabled() {

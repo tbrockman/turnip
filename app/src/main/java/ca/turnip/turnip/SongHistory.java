@@ -3,8 +3,8 @@ package ca.turnip.turnip;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
-import android.util.Log;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -13,63 +13,48 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
+import java.util.LinkedList;
 
 public class SongHistory {
 
     private static final String TAG = SongHistory.class.getSimpleName();
 
     private Context context;
-    private HashMap<String, Song> songs;
-    private Integer limit;
+    private LinkedList<Song> songsPlayed;
     private static final String songHistoryFilename = "song_history";
 
     public SongHistory(Context context) {
         this.context = context;
-        this.songs = readFromDisk();
-        this.limit = getStorageLimit();
+        this.songsPlayed = readSongsPlayedFromDisk();
     }
-
-    // TODO: change the internal structure of song history to be a linked list sorted
-    // by last played date.
-    // O(1) insertion and removal
-    // O(n) retrieval
-    // vs
-    // O(nlogn) insertion and removal
-    // O(1) retrieval
 
     public void addSong(Song song) {
         String songUri = song.getString("uri");
 
-        if (this.songs.size() >= limit) {
-            ArrayList<Song> sorted = toSortedArrayList();
-            Integer end = sorted.size() - 1;
-            while (this.songs.size() >= limit && end >= 0) {
-                String lastUri = sorted.get(end).getString("uri");
-                this.songs.remove(lastUri);
-                end--;
+        Iterator<Song> iterator = songsPlayed.iterator();
+
+        while (iterator.hasNext()) {
+            Song next = iterator.next();
+
+            if (next.getString("uri").equals(songUri)) {
+                iterator.remove();
             }
         }
 
-        songs.put(songUri, song);
+        songsPlayed.push(song);
+
+        while (this.songsPlayed.size() > getStorageLimit()) {
+            songsPlayed.removeLast();
+        }
+
+        writeToDisk();
     }
 
-    public ArrayList<Song> toArrayList() {
-        ArrayList<Song> songListHistory = new ArrayList<>();
-        songListHistory.addAll(songs.values());
-        //TODO: sort return values
-        return songListHistory;
-    }
-
-    public ArrayList<Song> toSortedArrayList() {
-        ArrayList<Song> songListHistory = toArrayList();
-        Collections.sort(songListHistory);
-        return songListHistory;
+    public ArrayList<Song> getSongHistoryList() {
+        ArrayList<Song> songHistoryList = new ArrayList<>(songsPlayed);
+        return songHistoryList;
     }
 
     public Integer getStorageLimit() {
@@ -84,23 +69,30 @@ public class SongHistory {
             FileOutputStream outputStream = context.openFileOutput(songHistoryFilename,
                                                                    context.MODE_PRIVATE);
             JSONObject json = new JSONObject();
-            for (Map.Entry<String, Song> entry : songs.entrySet()) {
-                json.put(entry.getKey(), entry.getValue().jsonSong);
+            JSONArray jsonSongs = new JSONArray();
+
+            Iterator<Song> iterator = songsPlayed.iterator();
+
+            while (iterator.hasNext()) {
+                Song next = iterator.next();
+                jsonSongs.put(next.jsonSong);
             }
+
+            json.put("songsPlayed", jsonSongs);
             outputStream.write(json.toString().getBytes());
             outputStream.close();
         } catch (Exception e) {
         }
     }
 
-    public HashMap<String, Song> readFromDisk() {
-        HashMap<String, Song> fromDisk;
+    public LinkedList<Song> readSongsPlayedFromDisk() {
+        LinkedList<Song> fromDisk;
 
         try {
             String stringSongHistory = readStringFromFile(context, songHistoryFilename);
-            fromDisk = parseStringHashMap(stringSongHistory);
+            fromDisk = parseJsonStringToLinkedList(stringSongHistory);
         } catch (IOException e) {
-            fromDisk = new HashMap<>();
+            fromDisk = new LinkedList<>();
         }
         return fromDisk;
     }
@@ -112,7 +104,7 @@ public class SongHistory {
         if ( inputStream != null ) {
             InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
             BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-            String receiveString = "";
+            String receiveString;
             StringBuilder stringBuilder = new StringBuilder();
 
             while ( (receiveString = bufferedReader.readLine()) != null ) {
@@ -126,14 +118,14 @@ public class SongHistory {
         return string;
     }
 
-    public HashMap<String, Song> parseStringHashMap(String stringHashMap) {
-        HashMap<String, Song> parsedHashMap = new HashMap<>();
+    public LinkedList<Song> parseJsonStringToLinkedList(String stringJson) {
+        LinkedList<Song> parsedLinkedList = new LinkedList<>();
         try {
-            JSONObject jsonSongHistory = new JSONObject(stringHashMap);
-            Iterator<String> keys = jsonSongHistory.keys();
-            while(keys.hasNext()) {
-                String key = keys.next();
-                JSONObject jsonSong = (JSONObject) jsonSongHistory.get(key);
+            JSONObject json = new JSONObject(stringJson);
+            JSONArray jsonSongs = json.getJSONArray("songsPlayed");
+
+            for (int i = 0; i < jsonSongs.length(); i++) {
+                JSONObject jsonSong = jsonSongs.getJSONObject(i);
                 Song song = null;
 
                 if (jsonSong.getString("songType").equals("spotify")) {
@@ -141,13 +133,12 @@ public class SongHistory {
                 }
 
                 if (song != null) {
-                    parsedHashMap.put(key, song);
+                    parsedLinkedList.offer(song);
                 }
             }
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        
-        return parsedHashMap;
+        return parsedLinkedList;
     }
 }
