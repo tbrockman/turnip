@@ -1,7 +1,10 @@
 package ca.turnip.turnip;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.view.MenuItem;
 
 public class SettingsActivity extends AppCompatActivity {

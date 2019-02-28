@@ -1,6 +1,8 @@
 package ca.turnip.turnip;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
 import org.json.JSONException;
@@ -11,6 +13,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -23,15 +26,36 @@ public class SongHistory {
 
     private Context context;
     private HashMap<String, Song> songs;
+    private Integer limit;
     private static final String songHistoryFilename = "song_history";
 
     public SongHistory(Context context) {
         this.context = context;
         this.songs = readFromDisk();
+        this.limit = getStorageLimit();
     }
+
+    // TODO: change the internal structure of song history to be a linked list sorted
+    // by last played date.
+    // O(1) insertion and removal
+    // O(n) retrieval
+    // vs
+    // O(nlogn) insertion and removal
+    // O(1) retrieval
 
     public void addSong(Song song) {
         String songUri = song.getString("uri");
+
+        if (this.songs.size() >= limit) {
+            ArrayList<Song> sorted = toSortedArrayList();
+            Integer end = sorted.size() - 1;
+            while (this.songs.size() >= limit && end >= 0) {
+                String lastUri = sorted.get(end).getString("uri");
+                this.songs.remove(lastUri);
+                end--;
+            }
+        }
+
         songs.put(songUri, song);
     }
 
@@ -46,6 +70,13 @@ public class SongHistory {
         ArrayList<Song> songListHistory = toArrayList();
         Collections.sort(songListHistory);
         return songListHistory;
+    }
+
+    public Integer getStorageLimit() {
+        Integer limit;
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        limit = Integer.valueOf(prefs.getString("save_queue_length", "50"));
+        return limit;
     }
 
     public void writeToDisk() {

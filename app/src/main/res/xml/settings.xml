@@ -11,11 +11,24 @@
 
         <SwitchPreferenceCompat
             android:key="save_queue"
-            android:title="Store song queue"
-            android:summary="Save information about songs played while you're connected"
+            android:title="Store songs played"
+            android:summary="Save the songs that play while you're connected to this room"
             android:defaultValue="true"
             android:iconSpaceReserved="false"
-            app:iconSpaceReserved="false"/>
+            app:iconSpaceReserved="false" />
+
+        <EditTextPreference
+            android:dialogLayout="@layout/song_storage_preference_dialog"
+            app:dialogLayout="@layout/song_storage_preference_dialog"
+            android:defaultValue="50"
+            android:key="save_queue_length"
+            android:enabled="false"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:summary="Set the maximum number of songs to store."
+            android:title="Song storage limit"
+            android:iconSpaceReserved="false"
+            app:iconSpaceReserved="false" />
 
     </PreferenceCategory>
 
