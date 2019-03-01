@@ -23,7 +23,7 @@
     <string name="shared_preference_token_key">ENCRYPTED_REFRESH_TOKEN</string>
     <string name="shared_preferences_iv">ENCRYPTION_IV</string>
     <string name="search_title">Search</string>
-    <string name="search_hint">Search songs</string>
+    <string name="search_hint">Search on Spotify</string>
     <string name="join_button_text">Join</string>
     <string name="leave_room_title">Leave room</string>
     <string name="leave_room_text_user">Are you sure you want to leave the room?</string>
