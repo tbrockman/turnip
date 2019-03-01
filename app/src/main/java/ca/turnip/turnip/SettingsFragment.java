@@ -11,13 +11,20 @@ import androidx.preference.PreferenceScreen;
 
 public class SettingsFragment extends PreferenceFragmentCompat {
 
+    public static final String saveQueueLengthSummaryPrefix = "Set the maximum number of songs to store.\nCurrent: ";
+
+    Context hostActivity;
+    Preference saveQueuePref;
+    Preference saveQueueLengthPref;
+    PreferenceScreen preferenceScreen;
+
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
         setPreferencesFromResource(R.xml.settings, rootKey);
 
-        PreferenceScreen preferenceScreen = getPreferenceScreen();
-        final Preference saveQueueLengthPref = preferenceScreen.findPreference("save_queue_length");
-        Preference saveQueuePref = preferenceScreen.findPreference("save_queue");
+        preferenceScreen = getPreferenceScreen();
+        saveQueueLengthPref = preferenceScreen.findPreference("save_queue_length");
+        saveQueuePref = preferenceScreen.findPreference("save_queue");
         saveQueuePref.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
             @Override
             public boolean onPreferenceChange(Preference preference, Object newValue) {
@@ -26,7 +33,15 @@ public class SettingsFragment extends PreferenceFragmentCompat {
             }
         });
 
-        Context hostActivity = getActivity();
+        saveQueueLengthPref.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+            @Override
+            public boolean onPreferenceChange(Preference preference, Object newValue) {
+                preference.setSummary(renderSaveQueueLengthSummary((String) newValue));
+                return true;
+            }
+        });
+
+        hostActivity = getActivity();
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(hostActivity);
         Boolean saveQueue = prefs.getBoolean("save_queue", false);
         saveQueueLengthPref.setEnabled(saveQueue);
@@ -35,6 +50,13 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     @Override
     public void onResume() {
         super.onResume();
-        getListView().setPadding(0, 0, 0, 0);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(hostActivity);
+        String saveQueueLength = prefs.getString("save_queue_length", "50");
+        saveQueueLengthPref.setSummary(renderSaveQueueLengthSummary(saveQueueLength));
+        //        getListView().setPadding(0, 0, 0, 0);
+    }
+
+    public CharSequence renderSaveQueueLengthSummary(String saveQueueLength) {
+        return saveQueueLengthSummaryPrefix + saveQueueLength;
     }
 }

@@ -45,7 +45,7 @@ public class SongHistory {
 
         songsPlayed.push(song);
 
-        while (this.songsPlayed.size() > getStorageLimit()) {
+        while (songsPlayed.size() > getStorageLimit()) {
             songsPlayed.removeLast();
         }
 
