@@ -17,13 +17,13 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <service
-            android:name=".BackgroundService"
+            android:name=".services.BackgroundService"
             android:enabled="true"
             android:exported="false"
             android:stopWithTask="false" />
 
         <activity
-            android:name=".MainActivity"
+            android:name=".activities.MainActivity"
             android:theme="@style/Empty">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -33,41 +33,41 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".HostActivity"
+            android:name=".activities.HostActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="@string/title_activity_host"
-            android:parentActivityName=".MainActivity"
+            android:parentActivityName=".activities.MainActivity"
             android:theme="@style/AppActionBarActivityTheme" />
         <!--
         TODO: allow room to re-orient,
         need to create horizontal song info dialog fragment to do so
         -->
         <activity
-            android:name=".RoomActivity"
+            android:name=".activities.RoomActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="Room"
-            android:parentActivityName=".MainActivity"
+            android:parentActivityName=".activities.MainActivity"
             android:screenOrientation="portrait"
             android:theme="@style/AppActionBarActivityTheme" />
         <activity
-            android:name=".RoomListActivity"
+            android:name=".activities.RoomListActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="Join"
-            android:parentActivityName=".MainActivity"
+            android:parentActivityName=".activities.MainActivity"
             android:theme="@style/AppActionBarActivityTheme" />
         <activity
-            android:name=".SongSearchActivity"
+            android:name=".activities.SongSearchActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:launchMode="singleTop"
-            android:parentActivityName=".RoomActivity"
+            android:parentActivityName=".activities.RoomActivity"
             android:theme="@style/Empty">
             <intent-filter>
                 <action android:name="android.intent.action.SEARCH" />
             </intent-filter>
         </activity>
-        <activity android:name=".SettingsActivity"
+        <activity android:name=".activities.SettingsActivity"
             android:theme="@style/PreferenceScreenTheme"
-            android:parentActivityName=".RoomActivity"
+            android:parentActivityName=".activities.RoomActivity"
             android:label="Settings"></activity>
     </application>
 

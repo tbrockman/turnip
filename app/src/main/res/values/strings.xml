@@ -36,8 +36,8 @@
     <string name="no_results_hints">We weren\'t able to find any songs, artists, or albums by that name.</string>
     <string name="ok">OK</string>
     <string name="install">Install</string>
-    <string name="no_hosts_found">No nearby hosts found</string>
-    <string name="no_hosts_hints">We weren\'t able to locate any nearby Turnip hosts. This can sometimes occur due to poor network connectivity. Swipe down to try searching again.</string>
+    <string name="no_hosts_found">No nearby hosts</string>
+    <string name="no_hosts_hints">We weren\'t able to locate any nearby hosts. This can sometimes occur due to poor network connectivity. Swipe down to try searching again.</string>
     <string name="share_description">Share icon</string>
     <string name="spotify_description">Spotify icon</string>
     <string name="favorite_description">Favorite icon</string>

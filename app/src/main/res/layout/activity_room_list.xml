@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:layout_gravity="center"
     android:background="@color/colorBackground"
-    tools:context=".RoomListActivity">
+    tools:context=".activities.RoomListActivity">
 
     <FrameLayout
         android:layout_width="match_parent"
