@@ -229,6 +229,7 @@ public class ServerJukebox extends Jukebox {
                 }
             });
         }
+        Log.i(TAG, "spotify is conneceted?" + String.valueOf(spotifyIsConnected));
     }
 
     public void skipSpotify() {

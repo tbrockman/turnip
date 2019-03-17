@@ -220,6 +220,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
             @Override
             public void onPastSessionError(final RoomSession session) {
+                Log.i(TAG, "here??");
                 AlertDialog.Builder builder = new AlertDialog.Builder(context);
                 builder.setPositiveButton("Restore", new DialogInterface.OnClickListener() {
 
@@ -403,7 +404,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
                         if (song != null) {
                             if (isHost) {
                                 // Add to local song queue and emit to all clients
-                                backgroundService.enqueueSong(song);
+                                backgroundService.enqueueOrPlaySong(song);
                             }
                             else {
                                 // Send to server
@@ -610,6 +611,8 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
                 if (backgroundService != null) {
 
+                    backgroundService.subscribeRoomJukeboxListener(roomJukeboxListener);
+                    // TODO: clean this up
                     if (isStarting) {
                         backgroundService.startupJukebox(isHost, roomName);
                     }
@@ -625,7 +628,7 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
                         backgroundService.connectToRoom(endpointId);
                     }
                     Log.d(TAG, "Binding Room connection service");
-                    backgroundService.subscribeRoomJukeboxListener(roomJukeboxListener);
+
                 }
             }
 

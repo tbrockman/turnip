@@ -267,31 +267,35 @@ public class BackgroundService extends Service {
         this.isHost = isHost;
 
         if (isHost) {
+            jukebox = new ServerJukebox(context, jukeboxListener);
+
             roomSessionHistory = RoomSessionHistory.fromDisk(context);
             lastRoomSessionName = roomSessionHistory.getMostRecentRoomSessionFilename();
 
             try {
                 lastRoomSession = RoomSession.fromDisk(context, lastRoomSessionName);
+                Log.i(TAG, lastRoomSession.toString());
             } catch (Exception e) {
+                Log.e(TAG, e.toString());
                 roomSessionHistory.removeRoomSession(lastRoomSessionName);
             }
+
+            currentRoomSession = new RoomSession(context, roomName);
+            currentRoomSession.writeToDisk();
+            roomSessionHistory.addRoomSession(currentRoomSession.getSessionFilename());
 
             if (lastRoomSession != null) {
                 if (!lastRoomSession.hasError()) {
                     roomSessionHistory.removeRoomSession(lastRoomSessionName);
                 }
                 else {
+                    Log.i(TAG, "properly here");
                     if (!lastRoomSession.sessionDidFinish()) {
+                        Log.i(TAG, "notifying ");
                         notifyPastSessionError(lastRoomSession);
                     }
                 }
             }
-
-
-            currentRoomSession = new RoomSession(context, roomName);
-            roomSessionHistory.addRoomSession(currentRoomSession.getSessionFilename());
-
-            jukebox = new ServerJukebox(context, jukeboxListener);
         }
         else {
             jukebox = new Jukebox(jukeboxListener);
@@ -555,7 +559,7 @@ public class BackgroundService extends Service {
                             jsonString = raw.substring(4);
                             JSONObject jsonSong = new JSONObject(jsonString);
                             Song song = new SpotifySong(jsonSong);
-                            enqueueSong(song);
+                            enqueueOrPlaySong(song);
                             break;
                         // Someone is attempting to authenticate with the server
                         case "pwd":
@@ -626,7 +630,7 @@ public class BackgroundService extends Service {
                             stringPayload = raw.substring(4);
                             jsonPayload = new JSONObject(stringPayload);
                             song = new SpotifySong(jsonPayload);
-                            enqueueSong(song);
+                            enqueueOrPlaySong(song);
                             break;
                         // Server playing a new song
                         case "ply":
@@ -902,17 +906,19 @@ public class BackgroundService extends Service {
     // Nearby network and jukebox song communication
 
     public void enqueueSong(Song song) {
+        notifySongAdded(song);
+        jukebox.enqueueSong(song);
+        emitSongAdded(connectedClients, song);
+    }
+
+    public void enqueueOrPlaySong(Song song) {
         if (currentRoomSession != null) {
             currentRoomSession.addSong(song);
-            Log.i(TAG, currentRoomSession.toString());
         }
 
         if (jukebox != null) {
             if (jukebox.getCurrentlyPlaying() != null || !isHost) {
-                // TODO: jukebox should probably do notification itself
-                notifySongAdded(song);
-                jukebox.enqueueSong(song);
-                emitSongAdded(connectedClients, song);
+                enqueueSong(song);
             }
             else {
                 jukebox.playSong(song);
@@ -1193,9 +1199,35 @@ public class BackgroundService extends Service {
     }
 
     public void restoreRoomSession(RoomSession session) {
-        ArrayList<Song> sessionQueue = session.getSessionQueue();
-        for (int i = session.getCurrentSessionQueueIndex(); i < sessionQueue.size(); i++) {
-            enqueueSong(sessionQueue.get(i));
+        roomSessionHistory.removeRoomSession(currentRoomSession.getSessionFilename());
+        roomSessionHistory.removeRoomSession(session.getSessionFilename());
+        // TODO: clean this up
+        session.updateSessionDate();
+        roomSessionHistory.addRoomSession(session.getSessionFilename());
+        currentRoomSession = session;
+
+        ArrayList<Song> originalQueue = session.getSessionQueue();
+        ArrayList<Song> copyQueue = new ArrayList<>();
+
+        for (int i = 0; i < originalQueue.size(); i++) {
+            copyQueue.add(originalQueue.get(i));
+        }
+
+        session.clearSessionQueue();
+
+        // TODO: need to enqueue these commands if spotify not yet connected;
+
+        for (int i = session.getCurrentSessionQueueIndex(); i < copyQueue.size(); i++) {
+            Song song = copyQueue.get(i);
+
+            if (i == session.getCurrentSessionQueueIndex()) {
+                Log.i(TAG, "playing: " + song.toString());
+                enqueueOrPlaySong(song);
+            }
+            else {
+                Log.i(TAG, "queuinging: " + song.toString());
+                enqueueSong(song);
+            }
         }
     }
 

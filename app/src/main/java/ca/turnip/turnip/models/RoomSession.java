@@ -1,6 +1,7 @@
 package ca.turnip.turnip.models;
 
 import android.content.Context;
+import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -19,12 +20,14 @@ import static ca.turnip.turnip.helpers.Utils.readStringFromFile;
 
 public class RoomSession {
 
+    private static String TAG = RoomSession.class.getSimpleName();
+
     private ArrayList<Song> sessionQueue;
     private boolean sessionError = false;
     private Context context;
     private Date sessionDate;
     private Integer currentSessionQueueIndex;
-    private SimpleDateFormat format = new SimpleDateFormat("EEE_d_MMM_yyyy_HH_mm_ss_Z");;
+    private SimpleDateFormat format = new SimpleDateFormat("EEE_d_MMM_yyyy_HH_mm_ss");;
     private String roomName;
 
     public RoomSession(Context context, String roomName) {
@@ -35,12 +38,13 @@ public class RoomSession {
         this.sessionQueue = new ArrayList<>();
     }
 
-    public RoomSession(JSONObject json) throws JSONException, ParseException {
-        sessionError = json.getBoolean("error");
-        sessionDate = format.parse(json.getString("date"));
-        roomName = json.getString("roomName");
-        currentSessionQueueIndex = json.getInt("queueIndex");
-        sessionQueue = new ArrayList<>();
+    public RoomSession(Context context, JSONObject json) throws JSONException, ParseException {
+        this.sessionError = json.getBoolean("error");
+        this.sessionDate = format.parse(json.getString("date"));
+        this.roomName = json.getString("roomName");
+        this.currentSessionQueueIndex = json.getInt("queueIndex");
+        this.sessionQueue = new ArrayList<>();
+        this.context = context;
 
         JSONArray jsonQueue = json.getJSONArray("queue");
 
@@ -53,7 +57,7 @@ public class RoomSession {
             }
 
             if (song != null) {
-                sessionQueue.add(song);
+                this.sessionQueue.add(song);
             }
         }
     }
@@ -75,6 +79,7 @@ public class RoomSession {
             outputStream.write(json.toString().getBytes());
             outputStream.close();
         } catch (Exception e) {
+            Log.e(TAG, e.toString());
         }
     }
 
@@ -105,7 +110,7 @@ public class RoomSession {
 
         String stringJSON = readStringFromFile(context, filename);
         JSONObject jsonSession = new JSONObject(stringJSON);
-        session = new RoomSession(jsonSession);
+        session = new RoomSession(context, jsonSession);
 
         return session;
     }
@@ -119,6 +124,10 @@ public class RoomSession {
         return sessionQueue;
     }
 
+    public void clearSessionQueue() {
+        sessionQueue.clear();
+    }
+
     public Integer getCurrentSessionQueueIndex() {
         return currentSessionQueueIndex;
     }
@@ -126,6 +135,14 @@ public class RoomSession {
     public void setError(boolean error) {
         sessionError = error;
         writeToDisk();
+    }
+
+    public void updateSessionDate() {
+        sessionDate = Calendar.getInstance().getTime();
+    }
+
+    public void setSessionDate(Date date) {
+        sessionDate = date;
     }
 
     public boolean hasError() {
