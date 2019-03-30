@@ -12,6 +12,9 @@ import com.spotify.protocol.client.Subscription;
 import com.spotify.protocol.types.Empty;
 import com.spotify.protocol.types.PlayerState;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+
 import ca.turnip.turnip.listeners.JukeboxListener;
 
 import static ca.turnip.turnip.activities.MainActivity.APP_REDIRECT_URI;
@@ -31,6 +34,10 @@ public class ServerJukebox extends Jukebox {
     private String spotifyCurrentlyAddedSong = null;
     private boolean spotifyIsConnected = false;
 
+    // Stored Spotify queue and play attempts
+    private ArrayList<String> spotifyEnqueueAttempts;
+    private String spotifyPlayAttempt;
+
     private boolean wasPaused = false;
     private boolean lock = false;
     private CallResult.ResultCallback<Empty> spotifyCallback = new CallResult.ResultCallback<Empty>() {
@@ -48,6 +55,7 @@ public class ServerJukebox extends Jukebox {
         // TODO: if spotify then ->
         this.roomContext = roomActivity;
         this.jukeboxListener = jukeboxListener;
+        this.spotifyEnqueueAttempts = new ArrayList<>();
         connectToSpotify(roomContext);
     }
 
@@ -154,6 +162,18 @@ public class ServerJukebox extends Jukebox {
                                                       .subscribeToPlayerState();
             playerStateSubscription.setEventCallback(spotifyEventCallback)
                                    .setErrorCallback(spotifyErrorCallback);
+
+            if (spotifyPlayAttempt != null) {
+                playSpotify(spotifyPlayAttempt);
+            }
+
+            Iterator<String> it = spotifyEnqueueAttempts.iterator();
+
+            while (it.hasNext()) {
+                String uri = it.next();
+                it.remove();
+                queueSpotify(uri);
+            }
         }
 
         @Override
@@ -215,6 +235,9 @@ public class ServerJukebox extends Jukebox {
                 }
             });
         }
+        else {
+            spotifyPlayAttempt = uri;
+        }
     }
 
     public void queueSpotify(String uri) {
@@ -228,6 +251,9 @@ public class ServerJukebox extends Jukebox {
                     connectToSpotify(roomContext);
                 }
             });
+        }
+        else {
+            spotifyEnqueueAttempts.add(uri);
         }
         Log.i(TAG, "spotify is conneceted?" + String.valueOf(spotifyIsConnected));
     }

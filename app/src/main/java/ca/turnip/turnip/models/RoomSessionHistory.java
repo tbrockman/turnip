@@ -60,7 +60,10 @@ public class RoomSessionHistory {
     }
 
     public String getMostRecentRoomSessionFilename() {
-        return roomSessionNames.get(roomSessionNames.size() - 1);
+        if (roomSessionNames.size() > 0) {
+            return roomSessionNames.get(roomSessionNames.size() - 1);
+        }
+        return null;
     }
 
     public static RoomSessionHistory fromDisk(Context ctx) {
