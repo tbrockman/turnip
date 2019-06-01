@@ -1,4 +1,4 @@
-package ca.turnip.turnip.models;
+package ca.turnip.turnip.controllers;
 
 import android.os.Handler;
 
@@ -7,6 +7,7 @@ import java.util.Calendar;
 import java.util.Iterator;
 
 import ca.turnip.turnip.listeners.JukeboxListener;
+import ca.turnip.turnip.models.Song;
 
 public class Jukebox {
 

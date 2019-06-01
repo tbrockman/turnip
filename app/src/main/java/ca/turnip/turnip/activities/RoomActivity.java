@@ -362,7 +362,6 @@ public class RoomActivity extends BackgroundServiceConnectedActivity {
 
     @Override
     public void onBackPressed () {
-        // TODO: display toast confirming navigation away
         dialog.show();
     }
 

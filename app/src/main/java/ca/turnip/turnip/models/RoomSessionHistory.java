@@ -45,6 +45,8 @@ public class RoomSessionHistory {
                 break;
             }
         }
+
+        writeToDisk();
     }
 
     public RoomSession getMostRecentRoomSession(Context ctx) {

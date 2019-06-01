@@ -26,49 +26,55 @@ public class RoomSession {
     private boolean sessionError = false;
     private Context context;
     private Date sessionDate;
-    private Integer currentSessionQueueIndex;
-    private SimpleDateFormat format = new SimpleDateFormat("EEE_d_MMM_yyyy_HH_mm_ss");;
+    private Integer sessionQueueIndex;
+    private SimpleDateFormat format = new SimpleDateFormat("EEE_d_MMM_yyyy_HH_mm_ss");
+    private Song currentlyPlaying;
+    private SongFactory songFactory = new SongFactory();
     private String roomName;
 
     public RoomSession(Context context, String roomName) {
-        this.context = context;
-        this.roomName = roomName;
-        this.sessionDate = Calendar.getInstance().getTime();
-        this.currentSessionQueueIndex = 0;
-        this.sessionQueue = new ArrayList<>();
+        this.context           = context;
+        this.roomName          = roomName;
+        this.sessionDate       = Calendar.getInstance().getTime();
+        this.sessionQueueIndex = -1;
+        this.sessionQueue      = new ArrayList<>();
     }
 
     public RoomSession(Context context, JSONObject json) throws JSONException, ParseException {
-        this.sessionError = json.getBoolean("error");
-        this.sessionDate = format.parse(json.getString("date"));
-        this.roomName = json.getString("roomName");
-        this.currentSessionQueueIndex = json.getInt("queueIndex");
-        this.sessionQueue = new ArrayList<>();
-        this.context = context;
+
+        JSONObject jsonCurrentlyPlaying = null;
+
+        if (json.has("currentlyPlaying")) {
+            jsonCurrentlyPlaying = json.getJSONObject("currentlyPlaying");
+            this.currentlyPlaying = songFactory.fromJson(jsonCurrentlyPlaying);
+        }
+        this.context           = context;
+        this.roomName          = json.getString("roomName");
+        this.sessionError      = json.getBoolean("error");
+        this.sessionDate       = format.parse(json.getString("date"));
+        this.sessionQueueIndex = json.getInt("queueIndex");
+        this.sessionQueue      = new ArrayList<>();
 
         JSONArray jsonQueue = json.getJSONArray("queue");
 
         for (int i = 0; i < jsonQueue.length(); i++) {
             JSONObject jsonSong = jsonQueue.getJSONObject(i);
-            Song song = null;
-
-            if (jsonSong.getString("songType").equals("spotify")) {
-                song = new SpotifySong(jsonSong);
-            }
-
+            Song song = songFactory.fromJson(jsonSong);
             if (song != null) {
                 this.sessionQueue.add(song);
             }
         }
-    }
+}
 
     public void addSong(Song song) {
         sessionQueue.add(song);
         writeToDisk();
     }
 
-    public void playSong() {
-        currentSessionQueueIndex += 1;
+    public void playSong(Song song) {
+        this.currentlyPlaying = song;
+        sessionQueueIndex += 1;
+        writeToDisk();
     }
 
     public void writeToDisk() {
@@ -76,6 +82,7 @@ public class RoomSession {
             FileOutputStream outputStream = context.openFileOutput(getSessionFilename(),
                                                                    context.MODE_PRIVATE);
             JSONObject json = toJSON();
+            printRoomSession();
             outputStream.write(json.toString().getBytes());
             outputStream.close();
         } catch (Exception e) {
@@ -94,11 +101,14 @@ public class RoomSession {
             jsonSongs.put(next.jsonSong);
         }
 
+        if (currentlyPlaying != null) {
+            json.put("currentlyPlaying", currentlyPlaying.jsonSong);
+        }
         json.put("date", format.format(sessionDate));
         json.put("error", sessionError);
         json.put("roomName", roomName);
         json.put("queue", jsonSongs);
-        json.put("queueIndex", currentSessionQueueIndex);
+        json.put("queueIndex", sessionQueueIndex);
 
         return json;
     }
@@ -106,7 +116,7 @@ public class RoomSession {
     public static RoomSession fromDisk(Context context, String filename) throws IOException,
                                                                                 JSONException,
                                                                                 ParseException {
-        RoomSession session = null;
+        RoomSession session;
 
         String stringJSON = readStringFromFile(context, filename);
         JSONObject jsonSession = new JSONObject(stringJSON);
@@ -126,10 +136,16 @@ public class RoomSession {
 
     public void clearSessionQueue() {
         sessionQueue.clear();
+        writeToDisk();
     }
 
-    public Integer getCurrentSessionQueueIndex() {
-        return currentSessionQueueIndex;
+    public void resetSessionQueueIndex() {
+        sessionQueueIndex = 0;
+        writeToDisk();
+    }
+
+    public Integer getSessionQueueIndex() {
+        return sessionQueueIndex;
     }
 
     public void setError(boolean error) {
@@ -139,6 +155,7 @@ public class RoomSession {
 
     public void updateSessionDate() {
         sessionDate = Calendar.getInstance().getTime();
+        writeToDisk();
     }
 
     public void setSessionDate(Date date) {
@@ -150,7 +167,20 @@ public class RoomSession {
     }
 
     public boolean sessionDidFinish() {
-        return currentSessionQueueIndex == sessionQueue.size();
+        return sessionQueueIndex >= sessionQueue.size() - 1;
+    }
+
+    public void printRoomSession() {
+        if (currentlyPlaying != null) {
+            Log.i(TAG, "CurrentlyPlaying: " + currentlyPlaying.getString("name"));
+        }
+        for (int i = 0; i < this.sessionQueue.size(); i++) {
+            Song song = this.sessionQueue.get(i);
+            Log.i(TAG, "SongQueue: " + song.getString("name"));
+        }
+        Log.i(TAG, "RoomName: " + roomName);
+        Log.i(TAG, "HasError: " + hasError());
+        Log.i(TAG, "SessionQueueIndex: " + sessionQueueIndex);
     }
 
     @Override

@@ -65,10 +65,10 @@ import ca.turnip.turnip.listeners.AuthenticationListener;
 import ca.turnip.turnip.listeners.JukeboxListener;
 import ca.turnip.turnip.listeners.RoomJukeboxListener;
 import ca.turnip.turnip.listeners.RoomListListener;
-import ca.turnip.turnip.models.Jukebox;
+import ca.turnip.turnip.controllers.Jukebox;
 import ca.turnip.turnip.models.RoomSession;
 import ca.turnip.turnip.models.RoomSessionHistory;
-import ca.turnip.turnip.models.ServerJukebox;
+import ca.turnip.turnip.controllers.ServerJukebox;
 import ca.turnip.turnip.models.Song;
 import ca.turnip.turnip.models.SongHistory;
 import ca.turnip.turnip.models.SpotifySong;
@@ -183,7 +183,7 @@ public class BackgroundService extends Service {
             }
 
             if (isHost) {
-                currentRoomSession.playSong();
+                currentRoomSession.playSong(song);
 
                 if (roomConfiguration.getSkipMode() != RoomConfiguration.NO_SKIP) {
                     if (votes != null) {
@@ -266,34 +266,31 @@ public class BackgroundService extends Service {
 
         this.isHost = isHost;
 
+        roomSessionHistory = RoomSessionHistory.fromDisk(context);
+        lastRoomSessionName = roomSessionHistory.getMostRecentRoomSessionFilename();
+
+        try {
+            lastRoomSession = RoomSession.fromDisk(context, lastRoomSessionName);
+            Log.i(TAG, lastRoomSession.toString());
+        } catch (Exception e) {
+            Log.e(TAG, "Error retrieving last RoomSession." + e.toString());
+            roomSessionHistory.removeRoomSession(lastRoomSessionName);
+        }
+
+        currentRoomSession = new RoomSession(context, roomName);
+        currentRoomSession.writeToDisk();
+        roomSessionHistory.addRoomSession(currentRoomSession.getSessionFilename());
+
         if (isHost) {
             jukebox = new ServerJukebox(context, jukeboxListener);
-
-            roomSessionHistory = RoomSessionHistory.fromDisk(context);
-            lastRoomSessionName = roomSessionHistory.getMostRecentRoomSessionFilename();
-
-            try {
-                lastRoomSession = RoomSession.fromDisk(context, lastRoomSessionName);
-                Log.i(TAG, lastRoomSession.toString());
-            } catch (Exception e) {
-                Log.e(TAG, e.toString());
-                roomSessionHistory.removeRoomSession(lastRoomSessionName);
-            }
-
-            currentRoomSession = new RoomSession(context, roomName);
-            currentRoomSession.writeToDisk();
-            roomSessionHistory.addRoomSession(currentRoomSession.getSessionFilename());
 
             if (lastRoomSession != null) {
                 if (!lastRoomSession.hasError()) {
                     roomSessionHistory.removeRoomSession(lastRoomSessionName);
                 }
                 else {
-                    Log.i(TAG, "properly here");
-                    if (!lastRoomSession.sessionDidFinish()) {
-                        Log.i(TAG, "notifying ");
-                        notifyPastSessionError(lastRoomSession);
-                    }
+                    Log.i(TAG, "Last session had error.");
+                    notifyPastSessionError(lastRoomSession);
                 }
             }
         }
@@ -912,6 +909,7 @@ public class BackgroundService extends Service {
     }
 
     public void enqueueOrPlaySong(Song song) {
+
         if (currentRoomSession != null) {
             currentRoomSession.addSong(song);
         }
@@ -1201,8 +1199,11 @@ public class BackgroundService extends Service {
     public void restoreRoomSession(RoomSession session) {
         roomSessionHistory.removeRoomSession(currentRoomSession.getSessionFilename());
         roomSessionHistory.removeRoomSession(session.getSessionFilename());
-        // TODO: clean this up
+
+        int sessionRestoreIndex = session.getSessionQueueIndex();
+        session.resetSessionQueueIndex();
         session.updateSessionDate();
+
         roomSessionHistory.addRoomSession(session.getSessionFilename());
         currentRoomSession = session;
 
@@ -1210,17 +1211,16 @@ public class BackgroundService extends Service {
         ArrayList<Song> copyQueue = new ArrayList<>();
 
         for (int i = 0; i < originalQueue.size(); i++) {
+            Log.i(TAG, "copying queue i: " + String.valueOf(i));
             copyQueue.add(originalQueue.get(i));
         }
 
         session.clearSessionQueue();
 
-        // TODO: need to enqueue these commands if spotify not yet connected;
-
-        for (int i = session.getCurrentSessionQueueIndex(); i < copyQueue.size(); i++) {
+        for (int i = sessionRestoreIndex; i < copyQueue.size(); i++) {
             Song song = copyQueue.get(i);
 
-            if (i == session.getCurrentSessionQueueIndex()) {
+            if (i == sessionRestoreIndex) {
                 Log.i(TAG, "playing: " + song.toString());
                 enqueueOrPlaySong(song);
             }

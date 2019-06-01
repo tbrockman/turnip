@@ -1,4 +1,4 @@
-package ca.turnip.turnip.models;
+package ca.turnip.turnip.controllers;
 
 import android.content.Context;
 import android.util.Log;
@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import ca.turnip.turnip.listeners.JukeboxListener;
+import ca.turnip.turnip.models.Song;
 
 import static ca.turnip.turnip.activities.MainActivity.APP_REDIRECT_URI;
 import static ca.turnip.turnip.activities.MainActivity.CLIENT_ID;
